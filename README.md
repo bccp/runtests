@@ -1,5 +1,7 @@
 # mpi4py\_test
 
+[![Build Status](https://travis-ci.org/rainwoodman/mpi4py_test.svg?branch=master)](https://travis-ci.org/rainwoodman/mpi4py_test)
+
 A simple tools for building packages, installing, then running the tests of massively parallel
 Python MPI applications written with mpi4py.
 
