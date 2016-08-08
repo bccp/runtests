@@ -368,7 +368,6 @@ class MPITester(object):
         root_ok = [os.path.exists(os.path.join(self.ROOT_DIR, fn))
                    for fn in self.PROJECT_ROOT_FILES]
         if not all(root_ok):
-            print root_ok, self.PROJECT_ROOT_FILES, self.ROOT_DIR
             print("To build the project, run runtests.py in "
                   "git checkout or unpacked source")
             sys.exit(1)
