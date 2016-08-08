@@ -1,0 +1,37 @@
+language: python
+
+python:
+    - 2.7
+    - 3.5
+
+env:
+    - NUMPY_VERSION=1.11.1
+
+before_install:
+    - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+    - chmod +x miniconda.sh
+    - ./miniconda.sh -b -p $HOME/miniconda
+    - export PATH=$HOME/miniconda/bin:$PATH
+    - conda update --yes conda
+
+install:
+    - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION
+    - source activate test
+    - conda install --yes numpy=$NUMPY_VERSION nose mpi4py
+    - python setup.py install
+
+script: 
+    - python ./runtests.py
+    - python ./runtests.py --mpirun --mpi-unmute
+    - bash check_tag.sh mpi4py_test/version.py
+
+deploy:
+    - provider: pypi
+      distributions: sdist
+      server: https://pypi.python.org/pypi
+      user: "rainwoodman"
+      password:
+          secure: "Kp2V4tBWvBgfNAhxCgmIfl8ci4QyaUVacC8dFGWhMQ56u0TCZ2hluBhxnVTKCqL46f6TvB/2zVnYBzUAt4WzCrZm00YrQfNbtrcfMuf30BuozWcOo4c5YL1yNCbIdYFN2UTGfjGqDFMpQvEwTnOTWeeG2KqIh+RmAM8bK239C2wrfQCFvFAK5RLxwLe0NYR7BCwLdcJ2p1pj1AUqRT2phpcvrzrjhJx2Ni+4LZwWDiviJPRNKixBwqkkkFPhMFHKpTAe+fPgNNSt4kaoxW1kOWluAVo84Sfm1yXs4gtduEbMB1TEkLW9BJS6e5w3cqFK137Fozy7cOAJe8b1PHejmEljTMEZ705+/tSMohdLSrLLV0vrA5bV9Up0yTVAMv0XZU/B/zVpbPIojnAtNFxS5djf2892hWTh9x6bCBTVPtY9F7ZB9in9BNx2BRkI40uGE8EvlU3/Gcgy/BxPh0daIRzc40Ad01SiEteDdnv8hD49Tudr5JvPCMPYuxHYPabpRhXSrldzv5SjC7AwuViExTGAEIRlBJX74y3H3J7D+3KhVCchGGs+cntRhkmk3YhFZttQdiNF+R/G9eDVgbQ5F8UDuADgvwrzJ4t7TKv3kqXgPKzGPR6Idlkze6wnfwynAo6dGjX9b1cj87exKHKdMS8rlVNN3KZkkFbxhmmP0ik="
+      on:
+        tags   : true
+        condition : $TRAVIS_PYTHON_VERSION = "2.7"
