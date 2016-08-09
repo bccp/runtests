@@ -189,6 +189,7 @@ class MPITester(object):
         if not args.no_build:
             site_dir = self.build_project(args)
             sys.path.insert(0, site_dir)
+            print(site_dir)
             os.environ['PYTHONPATH'] = site_dir
         if args.mpisub_site_dir:
             site_dir = args.mpisub_site_dir
@@ -281,8 +282,15 @@ class MPITester(object):
                 extra_argv = kw.pop('extra_argv', ())
                 extra_argv = extra_argv + tests[1:]
                 kw['extra_argv'] = extra_argv
+
+                save = dict(globals())
+
                 from numpy.testing import Tester
-                return Tester(tests[0]).test(*a, **kw)
+                result = Tester(tests[0]).test(*a, **kw)
+                # numpy tester messes up with globals. somehow.
+                globals().update(save)
+
+                return result
         else:
             __import__(self.PROJECT_MODULE)
             test = sys.modules[self.PROJECT_MODULE].test
@@ -305,10 +313,16 @@ class MPITester(object):
         if args.mpisub:
             oldstdout = sys.stdout
             oldstderr = sys.stderr
-            sys.stdout = StringIO()
-            sys.stderr = StringIO()
+            newstdout = StringIO()
+            newstderr = StringIO()
+
+            if self.comm.rank != 0:
+                sys.stdout = newstdout
+                sys.stderr = newstderr
 
         cwd = os.getcwd()
+
+        result = None
         try:
             os.chdir(test_dir)
             result = test(args.mode,
@@ -317,13 +331,16 @@ class MPITester(object):
                                                 + ['--stop'] if args.mpisub else [] ,
                           doctests=args.doctests,
                           coverage=args.coverage)
-        except Exception as e:
-            self.sleep()
-            oldstderr.write("Fatal Error on Rank %d\n" % self.comm.rank)
-            oldstderr.write(traceback.format_exc())
-            oldstderr.flush()
-            self.comm.Abort(-1)
-            pass
+        except:
+            if args.mpisub:
+                self.sleep()
+                oldstderr.write("Fatal Error on Rank %d\n" % self.comm.rank)
+                oldstderr.write(traceback.format_exc())
+                oldstderr.flush()
+                self.comm.Abort(-1)
+            else:
+                traceback.print_exc()
+                sys.exit(1)
         finally:
             os.chdir(cwd)
 
@@ -340,20 +357,13 @@ class MPITester(object):
                 # if any rank has a failure, print the error and abort the world.
                 self.sleep()
                 oldstderr.write("Test Failure due to rank %d\n" % self.comm.rank)
-                oldstderr.write(sys.stdout.getvalue())
-                oldstderr.write(sys.stderr.getvalue())
+                oldstderr.write(newstdout.getvalue())
+                oldstderr.write(newstderr.getvalue())
                 oldstderr.flush()
                 self.comm.Abort(-1)
 
             self.comm.barrier()
 
-            # this barrier passes only if no ranks fails.
-            # so we will print the messages from root rank for a peace of mind.
-
-            if self.comm.rank == 0:
-                oldstderr.write(sys.stdout.getvalue())
-                oldstderr.write(sys.stderr.getvalue())
-                oldstderr.flush()
             sys.exit(0)
 
         else:
@@ -408,6 +418,7 @@ class MPITester(object):
         cmd += ['build']
         if args.parallel > 1:
             cmd += ['-j', str(args.parallel)]
+
         cmd += ['install', '--prefix=' + dst_dir]
 
         log_filename = os.path.join(self.ROOT_DIR, 'build.log')
@@ -449,7 +460,12 @@ class MPITester(object):
 
         from distutils.sysconfig import get_python_lib
         site_dir = get_python_lib(prefix=dst_dir, plat_specific=True)
-
+        if not os.path.exists(os.path.join(site_dir, self.PROJECT_MODULE)):
+            # purelib?
+            site_dir = get_python_lib(prefix=dst_dir, plat_specific=False)
+        if not os.path.exists(os.path.join(site_dir, self.PROJECT_MODULE)):
+            print("Package %s not properly installed" % self.PROJECT_MODULE)
+            sys.exit(1)
         return site_dir
 
 
