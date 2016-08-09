@@ -4,4 +4,4 @@ import os.path
 
 tester = MPITester(os.path.abspath(__file__), "mpi4py_test")
 
-tester.main(sys.argv)
+tester.main(sys.argv[1:])

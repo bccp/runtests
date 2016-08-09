@@ -2,7 +2,7 @@ from mpi4py import MPI
 import traceback
 from .version import __version__
 
-def MPIWorld(NTask, required=[]):
+def MPIWorld(NTask, required=1):
     """ A decorator that repeatedly calls the wrapped function,
         with communicators of varying sizes.
 
@@ -24,7 +24,7 @@ def MPIWorld(NTask, required=[]):
 
     maxsize = max(required)
     if MPI.COMM_WORLD.size < maxsize:
-        raise ValueError("Test Failed because the world is too small. Increase to mpirun -n %d" % maxsize)
+        raise ValueError("Test Failed because the world is too small. Increase to mpirun -n %d, current size = %d" % (maxsize, MPI.COMM_WORLD.size))
 
     sizes = sorted(set(list(required) + list(NTask)))
     def dec(func):
@@ -118,7 +118,6 @@ class MPITester(object):
         def addmpirun(parser):
             parser.add_argument("--mpirun", default=None, nargs='?', const="mpirun -n 4",
                                 help="launcher for MPI, e.g. mpirun -n 4")
-
         # In case we are run from the source directory, we don't want to import the
         # project from there:
         sys.path.pop(0)
@@ -180,7 +179,6 @@ class MPITester(object):
         parser.add_argument("args", metavar="ARGS", default=[], nargs=REMAINDER,
                             help="Arguments to pass to Nose, Python or shell")
         addmpirun(parser)
-
         args = parser.parse_args(argv)
 
         if args.mpisub:
