@@ -41,19 +41,13 @@ def MPIWorld(NTask, required=1):
                 msg = ""
                 if color == 0:
                     assert comm.size == size
+                    # if the above fails then some ranks have already failed.
+                    # we are doomed anyways.
                     try:
                         func(*args, **kwargs)
                     except:
-                        failed = 1
-                        import traceback
-                        msg = traceback.format_exc()
-                gfailed = MPI.COMM_WORLD.allreduce(failed)
-                if gfailed > 0:
-                    msg = MPI.COMM_WORLD.allgather(msg)
-                if failed: raise
-                if gfailed > 0:
-                    raise ValueError("Some ranks failed with %s" % "\n".join(msg))
-
+                        traceback.print_exc()
+                        raise
         wrapped.__name__ = func.__name__
         return wrapped
     return dec
