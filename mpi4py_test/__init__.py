@@ -113,8 +113,7 @@ class MPITester(object):
                             help="do not build the project (use system installed version)")
         parser.add_argument("--mpisub", action="store_true", default=False,
                             help="run as a mpisub.")
-        parser.add_argument("--mpi-unmute", action="store_true", default=False,
-                            help="unmute other ranks")
+        parser.add_argument("--mpisub-site-dir", default=None, help="site-dir in mpisub")
         parser.add_argument("--build-only", "-b", action="store_true", default=False,
                             help="just build, do not run any tests")
         parser.add_argument("--doctests", action="store_true", default=False,
@@ -191,6 +190,8 @@ class MPITester(object):
             site_dir = self.build_project(args)
             sys.path.insert(0, site_dir)
             os.environ['PYTHONPATH'] = site_dir
+        if args.mpisub_site_dir:
+            site_dir = args.mpisub_site_dir
 
         extra_argv = args.args[:]
         if extra_argv and extra_argv[0] == '--':
@@ -249,7 +250,7 @@ class MPITester(object):
             args, additional = parser.parse_known_args()
             mpirun = args.mpirun.split()
 
-            os.execvp(mpirun[0], mpirun + [sys.executable, sys.argv[0], '--mpisub'] + additional)
+            os.execvp(mpirun[0], mpirun + [sys.executable, sys.argv[0], '--mpisub', '--mpisub-site-dir=' + site_dir ] + additional)
 
             sys.exit(1)
 
@@ -270,7 +271,8 @@ class MPITester(object):
                 # fix up test path
                 p = x.split(':')
                 p[0] = os.path.relpath(os.path.abspath(p[0]),
-                                       test_dir)
+                                       self.ROOT_DIR)
+                p[0] = os.path.join(site_dir, p[0])
                 return ':'.join(p)
 
             tests = [fix_test_path(x) for x in args.tests]
@@ -300,10 +302,11 @@ class MPITester(object):
 
         self.comm.barrier()
 
-        oldstdout = sys.stdout
-        oldstderr = sys.stderr
-        sys.stdout = StringIO()
-        sys.stderr = StringIO()
+        if args.mpisub:
+            oldstdout = sys.stdout
+            oldstderr = sys.stderr
+            sys.stdout = StringIO()
+            sys.stderr = StringIO()
 
         cwd = os.getcwd()
         try:
