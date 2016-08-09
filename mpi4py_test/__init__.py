@@ -37,17 +37,12 @@ def MPIWorld(NTask, required=1):
                 comm = MPI.COMM_WORLD.Split(color)
 
                 kwargs['comm'] = comm
-                failed = 0
-                msg = ""
+
                 if color == 0:
                     assert comm.size == size
                     # if the above fails then some ranks have already failed.
                     # we are doomed anyways.
-                    try:
-                        func(*args, **kwargs)
-                    except:
-                        traceback.print_exc()
-                        raise
+                    func(*args, **kwargs)
         wrapped.__name__ = func.__name__
         return wrapped
     return dec
@@ -102,11 +97,6 @@ class MPITester(object):
         self.EXTRA_PATH = extra_path
         self.PROJECT_MODULE = module
         self.comm = MPI.COMM_WORLD
-
-    def abort(self, e=None):
-        if e is not None:
-            traceback.print_exc()
-        self.comm.Abort(-1)
 
     def main(self, argv):
         def addmpirun(parser):
@@ -307,13 +297,13 @@ class MPITester(object):
                 os.makedirs(test_dir)
             except OSError:
                 pass
-        else:
-            # mute the rest.
-            if not args.mpi_unmute:
-                sys.stdout = StringIO()
-                sys.stderr = StringIO()
 
         self.comm.barrier()
+
+        oldstdout = sys.stdout
+        oldstderr = sys.stderr
+        sys.stdout = StringIO()
+        sys.stderr = StringIO()
 
         cwd = os.getcwd()
         try:
@@ -325,7 +315,11 @@ class MPITester(object):
                           doctests=args.doctests,
                           coverage=args.coverage)
         except Exception as e:
-            self.abort(e)
+            self.sleep()
+            oldstderr.write("Fatal Error on Rank %d\n" % self.comm.rank)
+            oldstderr.write(traceback.format_exc())
+            oldstderr.flush()
+            self.comm.Abort(-1)
             pass
         finally:
             os.chdir(cwd)
@@ -337,14 +331,34 @@ class MPITester(object):
             code = 0
         else:
             code = 1
+
         if args.mpisub:
-            if code == 0:
-                sys.exit(0)
-            else:
-                self.abort()
-                pass
+            if code != 0:
+                # if any rank has a failure, print the error and abort the world.
+                self.sleep()
+                oldstderr.write("Test Failure due to rank %d\n" % self.comm.rank)
+                oldstderr.write(sys.stdout.getvalue())
+                oldstderr.write(sys.stderr.getvalue())
+                oldstderr.flush()
+                self.comm.Abort(-1)
+
+            self.comm.barrier()
+
+            # this barrier passes only if no ranks fails.
+            # so we will print the messages from root rank for a peace of mind.
+
+            if self.comm.rank == 0:
+                oldstderr.write(sys.stdout.getvalue())
+                oldstderr.write(sys.stderr.getvalue())
+                oldstderr.flush()
+            sys.exit(0)
+
         else:
             sys.exit(code)
+
+    def sleep(self):
+        import time
+        time.sleep(0.04 * self.comm.rank)
 
     def build_project(self, args):
         """
