@@ -21,7 +21,6 @@ install:
     - python setup.py install
 
 script: 
-    - python ./runtests.py
     - python ./runtests.py --mpirun --mpi-unmute
     - bash check_tag.sh mpi4py_test/version.py
 
