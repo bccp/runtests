@@ -1,8 +1,9 @@
 from mpi4py import MPI
 import traceback
 from .version import __version__
+from numpy.testing.decorators import skipif, knownfailureif
 
-def MPIWorld(NTask, required=1):
+def MPIWorld(NTask, required=1, optional=False):
     """ A decorator that repeatedly calls the wrapped function,
         with communicators of varying sizes.
 
@@ -15,6 +16,8 @@ def MPIWorld(NTask, required=1):
             Required sizes of communicators. If the MPI_WORLD is insufficient, a Error is raised
             to abort the tests.
 
+        optional : boolean
+            If requirement not satistied, skip the test.
     """
     if not isinstance(NTask, (tuple, list)):
         NTask = (NTask,)
@@ -24,8 +27,10 @@ def MPIWorld(NTask, required=1):
 
     maxsize = max(required)
     if MPI.COMM_WORLD.size < maxsize:
-        raise ValueError("Test Failed because the world is too small. Increase to mpirun -n %d, current size = %d" % (maxsize, MPI.COMM_WORLD.size))
-
+        if not optional:
+            raise ValueError("Test Failed because the world is too small. Increase to mpirun -n %d, current size = %d" % (maxsize, MPI.COMM_WORLD.size))
+        else:
+            return knownfailureif(True, "Test will Fail because world is too small. Include the test with mpirun -n %d" % (maxsize))
     sizes = sorted(set(list(required) + list(NTask)))
     def dec(func):
         def wrapped(*args, **kwargs):
