@@ -2,7 +2,7 @@ from mpi4py import MPI
 import traceback
 from .version import __version__
 from numpy.testing.decorators import skipif, knownfailureif
-
+from types import GeneratorType
 class Rotator(object):
     """ in a rotator every range runs in terms """
     def __init__(self, comm):
@@ -56,8 +56,13 @@ def MPIWorld(NTask, required=1, optional=False):
                     def func2(size):
                         # if the above fails then some ranks have already failed.
                         # we are doomed anyways.
-                        func(*args, comm=comm)
-                    func2.description = "MPIWorld(size=%d):%s" % (size, func.__name__)
+                        rt = func(*args, comm=comm)
+                        if isinstance(rt, GeneratorType):
+                            raise ValueError("Generator Test is not supported. Nose doesn't expand nested generators.")
+                    desc = func.__name__
+                    if hasattr(func, 'description'):
+                        desc = func.description
+                    func2.description = "MPIWorld(size=%d):%s" % (size, desc)
                     yield func2, size
         wrapped.__name__ = func.__name__
         return wrapped
