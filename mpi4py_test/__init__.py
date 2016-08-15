@@ -3,6 +3,19 @@ import traceback
 from .version import __version__
 from numpy.testing.decorators import skipif, knownfailureif
 
+class Rotator(object):
+    """ in a rotator every range runs in terms """
+    def __init__(self, comm):
+        self.comm = comm
+    def __enter__(self):
+        self.comm.Barrier()
+        for i in range(self.comm.rank):
+            self.comm.Barrier()
+    def __exit__(self, type, value, tb):
+        for i in range(self.comm.rank, self.comm.size):
+            self.comm.Barrier()
+        self.comm.Barrier()
+
 def MPIWorld(NTask, required=1, optional=False):
     """ A decorator that repeatedly calls the wrapped function,
         with communicators of varying sizes.
@@ -33,21 +46,19 @@ def MPIWorld(NTask, required=1, optional=False):
             return knownfailureif(True, "Test will Fail because world is too small. Include the test with mpirun -n %d" % (maxsize))
     sizes = sorted(set(list(required) + list(NTask)))
     def dec(func):
-        def wrapped(*args, **kwargs):
+        def wrapped(*args):
             for size in sizes:
                 if MPI.COMM_WORLD.size < size: continue
-
                 color = 0 if MPI.COMM_WORLD.rank < size else 1
-                MPI.COMM_WORLD.barrier()
                 comm = MPI.COMM_WORLD.Split(color)
 
-                kwargs['comm'] = comm
-
                 if color == 0:
-                    assert comm.size == size
-                    # if the above fails then some ranks have already failed.
-                    # we are doomed anyways.
-                    func(*args, **kwargs)
+                    def func2(size):
+                        # if the above fails then some ranks have already failed.
+                        # we are doomed anyways.
+                        func(*args, comm=comm)
+                    func2.description = "MPIWorld(size=%d):%s" % (size, func.__name__)
+                    yield func2, size
         wrapped.__name__ = func.__name__
         return wrapped
     return dec
@@ -368,6 +379,11 @@ class MPITester(object):
                 self.comm.Abort(-1)
 
             self.comm.barrier()
+            with Rotator(self.comm):
+                oldstderr.write("------ Test result from rank %d -----\n" % self.comm.rank)
+                oldstderr.write(newstdout.getvalue())
+                oldstderr.write(newstderr.getvalue())
+                oldstderr.flush()
 
             sys.exit(0)
 
