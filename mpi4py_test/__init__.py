@@ -68,6 +68,8 @@ def MPIWorld(NTask, required=1, optional=False):
         return wrapped
     return dec
 
+MPIRun = MPIWorld
+
 import sys
 import os
 try:
