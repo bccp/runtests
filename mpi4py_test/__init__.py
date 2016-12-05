@@ -212,10 +212,11 @@ class MPITester(object):
         if not args.no_build:
             site_dir = self.build_project(args)
             sys.path.insert(0, site_dir)
-            print(site_dir)
             os.environ['PYTHONPATH'] = site_dir
         if args.mpisub_site_dir:
             site_dir = args.mpisub_site_dir
+            sys.path.insert(0, site_dir)
+            os.environ['PYTHONPATH'] = site_dir
 
         extra_argv = args.args[:]
         if extra_argv and extra_argv[0] == '--':
@@ -316,6 +317,7 @@ class MPITester(object):
                 return result
         else:
             __import__(self.PROJECT_MODULE)
+            print("Using module", self.PROJECT_MODULE, " from", sys.modules[self.PROJECT_MODULE])
             test = sys.modules[self.PROJECT_MODULE].test
 
         self.comm.barrier()
