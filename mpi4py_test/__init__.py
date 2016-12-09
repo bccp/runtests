@@ -3,6 +3,8 @@ import traceback
 from .version import __version__
 from numpy.testing.decorators import skipif, knownfailureif
 from types import GeneratorType
+import warnings
+
 class Rotator(object):
     """ in a rotator every range runs in terms """
     def __init__(self, comm):
@@ -32,6 +34,8 @@ def MPIWorld(NTask, required=1, optional=False):
         optional : boolean
             If requirement not satistied, skip the test.
     """
+    warnings.warn("This function is deprecated, use MPITest instead.", DeprecationWarning)
+
     if not isinstance(NTask, (tuple, list)):
         NTask = (NTask,)
 
@@ -68,7 +72,59 @@ def MPIWorld(NTask, required=1, optional=False):
         return wrapped
     return dec
 
-MPIRun = MPIWorld
+def MPITest(commsize):
+    """ A decorator that repeatedly calls the wrapped function,
+        with communicators of varying sizes.
+
+        This converts the test to a generator test; therefore the
+        underlyig test shall not be a generator test.
+
+
+        Parameters
+        ----------
+        commsize: scalar or tuple
+            Sizes of communicator to use
+
+        Usage
+        -----
+        @MPITest(commsize=[1, 2, 3])
+        def test_stuff(comm):
+            pass
+
+    """
+    if not isinstance(commsize, (tuple, list)):
+        commsize = (commsize,)
+
+    maxsize = max(commsize)
+    if MPI.COMM_WORLD.size < maxsize:
+        if not optional:
+            raise ValueError("Test Failed because the world is too small. Increase to mpirun -n %d, current size = %d" % (maxsize, MPI.COMM_WORLD.size))
+        else:
+            return knownfailureif(True, "Test will Fail because world is too small. Include the test with mpirun -n %d" % (maxsize))
+
+    sizes = sorted(list(commsize))
+    def dec(func):
+        def wrapped(*args):
+            for size in sizes:
+                if MPI.COMM_WORLD.size < size: continue
+                color = 0 if MPI.COMM_WORLD.rank < size else 1
+                comm = MPI.COMM_WORLD.Split(color)
+
+                if color == 0:
+                    def func2(size):
+                        # if the above fails then some ranks have already failed.
+                        # we are doomed anyways.
+                        rt = func(*args, comm=comm)
+                        if isinstance(rt, GeneratorType):
+                            raise ValueError("Generator Test is not supported. Nose doesn't expand nested generators.")
+                    desc = func.__name__
+                    if hasattr(func, 'description'):
+                        desc = func.description
+                    func2.description = "MPITest(commsize=%d):%s" % (size, desc)
+                    yield func2, size
+        wrapped.__name__ = func.__name__
+        return wrapped
+    return dec
 
 import sys
 import os
