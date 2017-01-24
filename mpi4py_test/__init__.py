@@ -95,15 +95,14 @@ def MPITest(commsize):
     if not isinstance(commsize, (tuple, list)):
         commsize = (commsize,)
 
-    maxsize = max(commsize)
-    if MPI.COMM_WORLD.size < maxsize:
-        return knownfailureif(True, "Test will Fail because world is too small. Include the test with mpirun -n %d" % (maxsize))
-
     sizes = sorted(list(commsize))
     def dec(func):
         def wrapped(*args):
             for size in sizes:
-                if MPI.COMM_WORLD.size < size: continue
+                if MPI.COMM_WORLD.size < size: 
+                    yield knownfailureif(True, "Test will Fail because world is too small. Include the test with mpirun -n %d" % (size))(func)
+
+                    continue
                 color = 0 if MPI.COMM_WORLD.rank < size else 1
                 comm = MPI.COMM_WORLD.Split(color)
 
@@ -402,6 +401,9 @@ class MPITester(object):
 
         result = None
         try:
+            if args.mpisub:
+                assert(os.path.exists(test_dir))
+                self.comm.barrier()
             os.chdir(test_dir)
             result = test(args.mode,
                           verbose=args.verbose if self.comm.rank == 0 else 0,
@@ -421,6 +423,8 @@ class MPITester(object):
                 sys.exit(1)
         finally:
             os.chdir(cwd)
+
+        self.comm.barrier()
 
         code = 0
         if isinstance(result, bool):
