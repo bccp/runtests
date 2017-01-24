@@ -97,10 +97,7 @@ def MPITest(commsize):
 
     maxsize = max(commsize)
     if MPI.COMM_WORLD.size < maxsize:
-        if not optional:
-            raise ValueError("Test Failed because the world is too small. Increase to mpirun -n %d, current size = %d" % (maxsize, MPI.COMM_WORLD.size))
-        else:
-            return knownfailureif(True, "Test will Fail because world is too small. Include the test with mpirun -n %d" % (maxsize))
+        return knownfailureif(True, "Test will Fail because world is too small. Include the test with mpirun -n %d" % (maxsize))
 
     sizes = sorted(list(commsize))
     def dec(func):
