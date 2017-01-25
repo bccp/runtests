@@ -21,6 +21,7 @@ setup(
     zip_safe = False,
     package_dir = {'mpi4py_test': 'mpi4py_test'},
     install_requires=['numpy', 'mpi4py'],
+    license='BSD-2-Clause',
     packages= ['mpi4py_test', 'mpi4py_test.tests'],
     requires=['numpy', 'mpi4py'],
 )
