@@ -36,3 +36,11 @@ deploy:
       on:
         tags   : true
         condition : $TRAVIS_PYTHON_VERSION = "2.7"
+
+    - provider: script
+      script: ./deploy_anaconda.sh
+      on:
+        tags   : true
+        condition : $TRAVIS_PYTHON_VERSION = "3.5"
+
+
