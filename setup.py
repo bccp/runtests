@@ -20,7 +20,7 @@ setup(
     description="Simple testing based on numpy for applications written with mpi4py.",
     zip_safe = False,
     package_dir = {'mpi4py_test': 'mpi4py_test'},
-    install_requires=['numpy'],
+    install_requires=['numpy', 'mpi4py'],
     packages= ['mpi4py_test', 'mpi4py_test.tests'],
-    requires=['numpy'],
+    requires=['numpy', 'mpi4py'],
 )
