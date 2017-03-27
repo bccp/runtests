@@ -17,13 +17,13 @@ before_install:
 install:
     - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION
     - source activate test
-    - conda install --yes numpy=$NUMPY_VERSION nose mpi4py
+    - conda install --yes numpy=$NUMPY_VERSION mpi4py pytest coverage
     - python setup.py install
 
 script: 
-    - python ./runtests.py --mpirun -t mpi4py_test/tests/test_mpiworld.py
+    - python ./runtests.py mpi4py_test/tests/test_mpiworld.py --mpirun
     # expecting a failure for uncollective
-    - if python ./runtests.py --mpirun -t mpi4py_test/tests/test_uncollective.py ; then false; fi;
+    - if python ./runtests.py mpi4py_test/tests/test_uncollective.py --mpirun; then false; fi;
     - bash check_tag.sh mpi4py_test/version.py
 
 deploy:
