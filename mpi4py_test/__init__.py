@@ -241,9 +241,13 @@ class MPITester(object):
             except OSError:
                 pass
             
+            # XXX: Yu: This is strange.
+            # Tests from the installation shall not depend on any files in the source
+            # code directory. I am disabling it to see if it helps python 2.
+            #
             # set up a symlink to the site dir from the test env
             # this ensures relative paths from the test dir in any configuration files will be correct
-            os.symlink(os.path.join(site_dir, self.PROJECT_MODULE), os.path.join(test_dir, self.PROJECT_MODULE))
+            # os.symlink(os.path.join(site_dir, self.PROJECT_MODULE), os.path.join(test_dir, self.PROJECT_MODULE))
 
         self.comm.barrier()
 
