@@ -240,6 +240,10 @@ class MPITester(object):
                 os.makedirs(test_dir)
             except OSError:
                 pass
+            
+            # set up a symlink to the site dir from the test env
+            # this ensures relative paths from the test dir in any configuration files will be correct
+            os.symlink(os.path.join(site_dir, self.PROJECT_MODULE), os.path.join(test_dir, self.PROJECT_MODULE))
 
         self.comm.barrier()
 
