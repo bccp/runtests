@@ -22,6 +22,6 @@ setup(
     package_dir = {'mpi4py_test': 'mpi4py_test'},
     install_requires=['mpi4py', 'numpy', 'pytest', 'coverage'],
     license='BSD-2-Clause',
-    packages= ['mpi4py_test', 'mpi4py_test.tests'],
+    packages= ['mpi4py_test', 'mpi4py_test_tests'],
     requires=['mpi4py', 'numpy', 'pytest', 'coverage'],
 )
