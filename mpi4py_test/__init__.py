@@ -193,12 +193,7 @@ class MPITester(object):
             site_dir = args.mpisub_site_dir
             sys.path.insert(0, site_dir)
             os.environ['PYTHONPATH'] = site_dir
-            
-        # need to remove PROJECT_MODULE if its imported already
-        # so that the newly built version gets imported
-        if self.PROJECT_MODULE in sys.modules:
-            sys.modules.pop(self.PROJECT_MODULE)
-                        
+
         if args.mpirun:
             
             # extract the mpirun run argument
