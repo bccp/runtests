@@ -1,7 +1,6 @@
-from mpi4py_test import MPITester
+from mpi4py_test.mpi import Tester
 import sys
 import os.path
 
-tester = MPITester(os.path.abspath(__file__), "mpi4py_test")
-
+tester = Tester(os.path.abspath(__file__), "mpi4py_test")
 tester.main(sys.argv[1:])
