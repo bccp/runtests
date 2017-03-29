@@ -11,13 +11,11 @@ class Coverage(object):
     root process to combine them at the end
     """
     
-    def __init__(self, comm, source, with_coverage=False, html_cov=False, 
-                    config_file=None, root=''):
+    def __init__(self, source, with_coverage=False, html_cov=False, 
+                    config_file=None, root='', comm=None):
         """
         Parameters
         ----------
-        comm : MPI communicator
-            the MPI communicator
         source : str
             the name of the package module which we are reporting coverage for
         with_coverage : bool, optional
@@ -28,6 +26,8 @@ class Coverage(object):
             a coveragerc file to load
         root : str, optional
             this specifies the root of the package 
+        comm : MPI communicator, optional
+            the MPI communicator
         """
         self.comm = comm
         self.source = source
@@ -56,29 +56,46 @@ class Coverage(object):
             return
         
         self.cov.stop()
-        with tempfile.TemporaryDirectory() as tmpdir:
+        
+        # with only one rank, just write out the coverage
+        if self.comm is None or self.comm.size == 1:
+            self.cov.get_data().write_file(os.path.join(self.root, self.cov.config.data_file))
+            self.report(self.cov)
             
-            # write coverage data file
-            self.cov.get_data().write_file(os.path.join(tmpdir, '.coverage.%d' % os.getpid()))
+        # parallel -- combine coverage from all ranks
+        else:
+            # write to temporary files, then have root combine them
+            with tempfile.TemporaryDirectory() as tmpdir:
             
-            # now combine from each rank and save
-            if self.comm.rank == 0:
-                
-                # write out combined data
-                combined_cov = coverage.coverage(config_file=self.config_file, data_file='.coverage')
-                combined_cov.combine(data_paths=[tmpdir])
-                combined_cov.get_data().write_file(os.path.join(self.root, self.cov.config.data_file))
-                
-                # and report
-                combined_cov.report()
-                
-                # write html
-                if self.html_cov:
-                    html_dir = os.path.join(self.root, 'build', 'coverage')
-                    if not os.path.exists(html_dir):
-                        os.makedirs(html_dir)
-                    combined_cov.html_report(directory=html_dir)
+                # write coverage data file
+                self.cov.get_data().write_file(os.path.join(tmpdir, '.coverage.%d' % os.getpid()))
             
-            self.comm.barrier()
+                # now combine from each rank and save
+                self.comm.barrier()
+                if self.comm.rank == 0:
+                
+                    # write out combined data
+                    combined_cov = coverage.coverage(config_file=self.config_file, data_file='.coverage')
+                    combined_cov.combine(data_paths=[tmpdir])
+                    combined_cov.get_data().write_file(os.path.join(self.root, self.cov.config.data_file))
+                 
+                    # and report
+                    self.report(combined_cov)
+            
+                self.comm.barrier()
 
+
+    def report(self, cov):
+        """
+        Report the coverage
+        """
+        # and report (to screen)
+        cov.report()
+    
+        # write html
+        if self.html_cov:
+            html_dir = os.path.join(self.root, 'build', 'coverage')
+            if not os.path.exists(html_dir):
+                os.makedirs(html_dir)
+            cov.html_report(directory=html_dir)
     
