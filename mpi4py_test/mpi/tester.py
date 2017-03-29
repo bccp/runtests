@@ -245,7 +245,7 @@ class Tester(BaseTester):
         
     def _do_build(self, args):
         
-        site_dir = super(Tester, self)._get_site_dir(args)
+        site_dir = super(Tester, self)._do_build(args)
             
         if args.mpisub_site_dir:
             site_dir = args.mpisub_site_dir
