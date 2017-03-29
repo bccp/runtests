@@ -1,4 +1,4 @@
-from mpi4py_test import MPITest
+from mpi4py_test.mpi import MPITest
 
 @MPITest(commsize=[1, 2])
 def test_uncollective_error(comm):
