@@ -1,5 +1,4 @@
 from distutils.core import setup
-import numpy
 
 def find_version(path):
     import re
@@ -14,14 +13,15 @@ def find_version(path):
 setup(
     name="mpi4py_test",
     version=find_version("mpi4py_test/version.py"),
-    author="Yu Feng",
+    author="Yu Feng, Nick Hand",
     author_email="rainwoodman@gmail.com",
     url="http://github.com/rainwoodman/mpi4py_test",
-    description="Simple pytest testing for applications written with mpi4py.",
+    description="Simple testing of fresh builds using pytest, with optional mpi4py support",
     zip_safe = False,
     package_dir = {'mpi4py_test': 'mpi4py_test'},
-    install_requires=['mpi4py', 'numpy', 'pytest', 'coverage'],
+    install_requires=['pytest', 'coverage'],
     license='BSD-2-Clause',
-    packages= ['mpi4py_test', 'mpi4py_test.tests'],
-    requires=['mpi4py', 'numpy', 'pytest', 'coverage'],
+    packages= ['mpi4py_test', 'mpi4py_test_tests'],
+    requires=['pytest', 'coverage'],
+    extras_require={'full':['mpi4py'], 'mpi':['mpi4py']}
 )
