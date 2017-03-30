@@ -15,6 +15,11 @@ if sys.version_info[0] == 2:
     from cStringIO import StringIO
 else:
     from io import StringIO
+import re
+
+def fix_titles(s):
+    pattern = '=====+'
+    return re.sub(pattern, lambda x: x.group(0).replace('=', '-'), s)
 
 class Rotator(object):
     """ in a rotator every range runs in terms """
@@ -235,10 +240,13 @@ class Tester(BaseTester):
 
             self.comm.barrier()
             with Rotator(self.comm):
-                self.oldstderr.write("------ Test result from rank %d -----\n" % self.comm.rank)
-                self.oldstderr.write(newstdout.getvalue())
-                self.oldstderr.write(newstderr.getvalue())
-                self.oldstderr.flush()
+                if self.comm.rank != 0:
+                    self.oldstderr.write("\n")
+                    self.oldstderr.write("=" * 32 + " Rank %d / %d " % (self.comm.rank, self.comm.size) + "=" * 32)
+                    self.oldstderr.write("\n")
+                    self.oldstderr.write(fix_titles(newstdout.getvalue()))
+                    self.oldstderr.write(fix_titles(newstderr.getvalue()))
+                    self.oldstderr.flush()
 
             sys.exit(0)
 
