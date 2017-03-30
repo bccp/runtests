@@ -1,4 +1,4 @@
-from runtests.mpi import Tester
+from runtests import Tester
 import sys
 import os.path
 

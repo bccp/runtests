@@ -136,7 +136,7 @@ class Tester(object):
             sys.exit(1)
 
     @contextlib.contextmanager
-    def _run_from_testdir(self):
+    def _run_from_testdir(self, args):
         """
         Context manager to safely change directory
         to ``build/test``
