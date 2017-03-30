@@ -11,17 +11,17 @@ def find_version(path):
     raise RuntimeError("Version not found")
 
 setup(
-    name="mpi4py_test",
-    version=find_version("mpi4py_test/version.py"),
+    name="runtests",
+    version=find_version("runtests/version.py"),
     author="Yu Feng, Nick Hand",
     author_email="rainwoodman@gmail.com",
-    url="http://github.com/rainwoodman/mpi4py_test",
-    description="Simple testing of fresh builds using pytest, with optional mpi4py support",
+    url="http://github.com/rainwoodman/runtests",
+    description="Simple testing of fresh package builds using pytest, with optional mpi4py support",
     zip_safe = False,
-    package_dir = {'mpi4py_test': 'mpi4py_test'},
+    package_dir = {'runtests': 'runtests'},
     install_requires=['pytest', 'coverage'],
     license='BSD-2-Clause',
-    packages= ['mpi4py_test', 'mpi4py_test_tests'],
+    packages= ['runtests', 'tests'],
     requires=['pytest', 'coverage'],
     extras_require={'full':['mpi4py'], 'mpi':['mpi4py']}
 )

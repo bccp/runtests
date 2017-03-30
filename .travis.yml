@@ -21,10 +21,10 @@ install:
     - python setup.py install
 
 script: 
-    - python ./runtests.py mpi4py_test_tests/test_mpiworld.py --mpirun
+    - python ./runtests.py tests/test_mpiworld.py --mpirun
     # expecting a failure for uncollective
-    - if python ./runtests.py mpi4py_test_tests/test_uncollective.py --mpirun; then false; fi;
-    - bash check_tag.sh mpi4py_test/version.py
+    - if python ./runtests.py tests/test_uncollective.py --mpirun; then false; fi;
+    - bash check_tag.sh runtests/version.py
 
 deploy:
     - provider: pypi
