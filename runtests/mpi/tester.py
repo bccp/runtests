@@ -198,8 +198,8 @@ class Tester(BaseTester):
         
         # reset the output
         if args.mpisub:
-            oldstdout = sys.stdout
-            oldstderr = sys.stderr
+            self.oldstdout = sys.stdout
+            self.oldstderr = sys.stderr
             newstdout = StringIO()
             newstderr = StringIO()
 
@@ -225,18 +225,18 @@ class Tester(BaseTester):
             if code != 0:
                 # if any rank has a failure, print the error and abort the world.
                 self._sleep()
-                oldstderr.write("Test Failure due to rank %d\n" % self.comm.rank)
-                oldstderr.write(newstdout.getvalue())
-                oldstderr.write(newstderr.getvalue())
-                oldstderr.flush()
+                self.oldstderr.write("Test Failure due to rank %d\n" % self.comm.rank)
+                self.oldstderr.write(newstdout.getvalue())
+                self.oldstderr.write(newstderr.getvalue())
+                self.oldstderr.flush()
                 self.comm.Abort(-1)
 
             self.comm.barrier()
             with Rotator(self.comm):
-                oldstderr.write("------ Test result from rank %d -----\n" % self.comm.rank)
-                oldstderr.write(newstdout.getvalue())
-                oldstderr.write(newstderr.getvalue())
-                oldstderr.flush()
+                self.oldstderr.write("------ Test result from rank %d -----\n" % self.comm.rank)
+                self.oldstderr.write(newstdout.getvalue())
+                self.oldstderr.write(newstderr.getvalue())
+                self.oldstderr.flush()
 
             sys.exit(0)
 
@@ -271,9 +271,9 @@ class Tester(BaseTester):
         except:
             if args.mpisub:
                 self._sleep()
-                oldstderr.write("Fatal Error on Rank %d\n" % self.comm.rank)
-                oldstderr.write(traceback.format_exc())
-                oldstderr.flush()
+                self.oldstderr.write("Fatal Error on Rank %d\n" % self.comm.rank)
+                self.oldstderr.write(traceback.format_exc())
+                self.oldstderr.flush()
                 self.comm.Abort(-1)
             else:
                 traceback.print_exc()
