@@ -187,7 +187,10 @@ class Tester(BaseTester):
             parser = ArgumentParser(add_help=False)
             parser.add_argument("--mpirun", default=None, const='mpirun -n 4', nargs='?')
             args, additional = parser.parse_known_args()
-            
+
+            # make the test directory exists
+            self._initialize_testdir()
+
             # now call with mpirun
             mpirun = args.mpirun.split()
             cmdargs = [sys.executable, sys.argv[0], '--mpisub', '--mpisub-site-dir=' + site_dir]
@@ -200,14 +203,9 @@ class Tester(BaseTester):
         # fix the path of the modules we are testing
         config.args = self._fix_test_paths(site_dir, config.args) 
 
-        # make the test directory exists
-        self.comm.barrier()
-        if self.comm.rank == 0:
-            self._initialize_testdir()
-        self.comm.barrier()
-        
         # reset the output
         if args.mpisub:
+
             self.oldstdout = sys.stdout
             self.oldstderr = sys.stderr
             newstdout = StringIO()
