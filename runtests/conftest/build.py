@@ -9,6 +9,9 @@ def pytest_addoption(parser):
 
     parser.addoption("--build-only", action="store_true", default=False,
                     help="just build, do not run any tests")
+
+    parser.addoption("--shell", action="store_true", default=False,
+                    help="start a shell with the installed package properly set up in the path")
                     
     parser.addoption("--show-build-log", action="store_true",
                     help="show build output rather than using a log file")

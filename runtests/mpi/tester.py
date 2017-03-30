@@ -178,6 +178,9 @@ class Tester(BaseTester):
         # build the project, returning the site directory
         site_dir = self._do_build(args)
 
+        if args.shell:
+            self._do_shell(args, config)
+
         if args.mpirun:
             
             # extract the mpirun run argument

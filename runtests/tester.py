@@ -66,6 +66,9 @@ class Tester(object):
         # build the project, returning the site directory
         site_dir = self._do_build(args)
 
+        if args.shell:
+            self._do_shell(args, config)
+
         if args.build_only:
             sys.exit(0)
                     
@@ -84,7 +87,7 @@ class Tester(object):
 
         # run the tests
         code = None
-        with self._run_from_testdir():
+        with self._run_from_testdir(args):
             code = self._test(config, **covargs)
         
         # and exit  
@@ -121,7 +124,17 @@ class Tester(object):
             os.environ['PYTHONPATH'] = site_dir
         
         return site_dir
-    
+
+    def _do_shell(self, args, config):
+        capman = config.pluginmanager.getplugin('capturemanager')
+        if capman:
+            out, err = capman.suspendcapture(in_=True)
+        shell = os.environ.get('SHELL', 'sh')
+        print("Spawning a Unix shell...")
+        with self._run_from_testdir(args):
+            os.execv(shell, [shell] + config.args[1:])
+            sys.exit(1)
+
     @contextlib.contextmanager
     def _run_from_testdir(self):
         """
