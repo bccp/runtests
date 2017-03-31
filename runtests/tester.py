@@ -29,7 +29,7 @@ class Tester(object):
         """
         Parameters
         ----------
-        package_file : str
+        package_files : str
             the path to the main directory of the source package
         module : str
             the name of the package to test
@@ -37,7 +37,7 @@ class Tester(object):
             extra paths to include on PATH when building
         """
         self.ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(package_file)))
-        self.PROJECT_ROOT_FILES = [package_file, 'setup.py', 'LICENSE']
+        self.PROJECT_ROOT_FILES = [package_file, 'setup.py']
         self.EXTRA_PATH = extra_path
         self.PROJECT_MODULE = module
         self.TEST_DIR = os.path.join(self.ROOT_DIR, 'build', 'test')
