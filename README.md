@@ -49,3 +49,11 @@ Examples:
         assert result # or ....
 
 
+## Caveats
+
+Although runtests installs a package before testing, it cannot apply the same
+logic to itself.
+This is because the scripts refuses to import from the source code directory;
+without the supporting modules, the scripts won't run.
+
+
