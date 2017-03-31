@@ -49,3 +49,11 @@ Examples:
         assert result # or ....
 
 
+## Caveats
+
+Testing runtests itself requires an installed version of runtests.
+
+This is because the example scripts we use for testing runtests,
+refuses to import from the source code directory.
+
+

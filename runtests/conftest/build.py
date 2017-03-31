@@ -7,6 +7,8 @@ def pytest_addoption(parser):
     parser.addoption("--no-build", action="store_true", default=False,
                     help="do not build the project (use system installed version)")
 
+    parser.addoption("--parallel", default=0, type=int, help="run a parallel build")
+
     parser.addoption("--build-only", action="store_true", default=False,
                     help="just build, do not run any tests")
 

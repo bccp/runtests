@@ -221,13 +221,53 @@ class Tester(object):
 
         dst_dir = os.path.join(self.ROOT_DIR, 'build', 'testenv')
 
+        from distutils.sysconfig import get_python_lib
+        site_dir = get_python_lib(prefix=dst_dir, plat_specific=True)
+        site_dir_noarch = get_python_lib(prefix=dst_dir, plat_specific=False)
+
+        site_dirs = [site_dir, site_dir_noarch]
+
         env = dict(os.environ)
         cmd = [sys.executable, 'setup.py']
 
         # Always use ccache, if installed
         env['PATH'] = os.pathsep.join(self.EXTRA_PATH + env.get('PATH', '').split(os.pathsep))
+
+        # easy_install won't install to a path that Python by default cannot see
+        # and isn't on the PYTHONPATH.  Plus, it has to exist.
+        for dir in site_dirs:
+            basedir = os.path.basename(dir)
+            if not os.path.exists(basedir):
+                os.makedirs(basedir)
+
+        env['PYTHONPATH'] = ':'.join(site_dirs)
+
+
+        if args.debug:
+            # assume everyone who debugs uses gcc/gfortran
+            env['OPT'] = '-O0 -ggdb'
+            env['FOPT'] = '-O0 -ggdb'
+
         cmd += ['build']
-        cmd += ['install', '--prefix=' + dst_dir]
+
+        if args.parallel > 1:
+            cmd += ["-j", str(args.parallel)]
+
+        with open('setup.py', 'rt') as ff:
+            text = ff.read()
+            import re
+            if re.search('from\s\s*setuptools', text):
+                use_setuptools = True
+            else:
+                use_setuptools = False
+
+        if use_setuptools:
+            cmd += ['install', '--prefix=' + dst_dir,
+                    '--single-version-externally-managed',
+                    '--record=' + dst_dir + 'tmp_install_log.txt']
+        else:
+            cmd += ['install', '--prefix=' + dst_dir]
+
 
         if args.show_build_log:
             ret = subprocess.call(cmd, env=env, cwd=self.ROOT_DIR)
@@ -264,12 +304,11 @@ class Tester(object):
                 print("Build failed!")
             sys.exit(1)
 
-        from distutils.sysconfig import get_python_lib
-        site_dir = get_python_lib(prefix=dst_dir, plat_specific=True)
-        if not os.path.exists(os.path.join(site_dir, self.PROJECT_MODULE)):
-            # purelib?
-            site_dir = get_python_lib(prefix=dst_dir, plat_specific=False)
-        if not os.path.exists(os.path.join(site_dir, self.PROJECT_MODULE)):
+        for site_dir in site_dirs:
+            if os.path.exists(os.path.join(site_dir, self.PROJECT_MODULE)):
+                break
+        else:
             print("Package %s not properly installed" % self.PROJECT_MODULE)
             sys.exit(1)
+
         return site_dir
