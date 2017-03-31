@@ -23,6 +23,6 @@ setup(
     license='BSD-2-Clause',
     packages= ['runtests'],
     requires=['pytest', 'coverage'],
-    package_data = {'runtests' : ['tests/*.py']},
+    package_data = {'runtests' : ['tests/*.py', 'mpi/tests/*.py']},
     extras_require={'full':['mpi4py'], 'mpi':['mpi4py']}
 )
