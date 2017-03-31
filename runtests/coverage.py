@@ -2,6 +2,7 @@ from __future__ import absolute_import
 import tempfile
 import os
 import coverage
+import shutil
 
 class Coverage(object):
     """
@@ -66,7 +67,8 @@ class Coverage(object):
         # parallel -- combine coverage from all ranks
         else:
             # write to temporary files, then have root combine them
-            with tempfile.TemporaryDirectory() as tmpdir:
+            try:
+                tmpdir = tempfile.mkdtemp()
             
                 # write coverage data file
                 self.cov.get_data().write_file(os.path.join(tmpdir, '.coverage.%d' % os.getpid()))
@@ -82,8 +84,10 @@ class Coverage(object):
                  
                     # and report
                     self.report(combined_cov)
-            
+            finally:
                 self.comm.barrier()
+                shutil.rmtree(tmpdir)
+                
 
 
     def report(self, cov):
