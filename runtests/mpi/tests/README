@@ -1,0 +1,5 @@
+__init__.py is not here because we do not want this dir to be a package.
+pytest will be able to find the files. 
+
+With __init__.py the module lookup is messed up. These files
+are forcely distributed as package_data.
