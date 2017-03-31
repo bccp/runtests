@@ -140,9 +140,10 @@ class Tester(BaseTester):
     Run MPI-enabled tests using pytest, building the project first.
     
     Examples::
-        $ python runtests.py my/module --mpirun
-        $ python runtests.py my/module/tests/test_abc.py --mpirun
-        $ python runtests.py my/module --mpirun="mpirun -np 4"
+        $ python runtests.py my/module
+        $ python runtests.py --single my/module
+        $ python runtests.py my/module/tests/test_abc.py
+        $ python runtests.py --mpirun="mpirun -np 4" my/module
         $ python runtests.py --mpirun="mpirun -np 4"
     """
     plugins = [conftest.build, conftest.mpi]
@@ -162,11 +163,11 @@ class Tester(BaseTester):
         self.comm = MPI.COMM_WORLD
         
     def main(self, argv):
-        
-        argv.append('-x')
+        # must bail after first dead test; avoiding a fault MPI collective state.
+        argv.insert(1, '-x')
+
         config = self._get_pytest_config(argv)
         args = config.known_args_namespace
-        
         # print help and exit
         if args.help:
             return config.hook.pytest_cmdline_main(config=config)
@@ -184,12 +185,14 @@ class Tester(BaseTester):
         if args.shell:
             self._do_shell(args, config)
 
-        if args.mpirun:
+        if not args.single and not args.mpisub:
             
             # extract the mpirun run argument
             parser = ArgumentParser(add_help=False)
-            parser.add_argument("--mpirun", default=None, const='mpirun -n 4', nargs='?')
-            args, additional = parser.parse_known_args()
+            # these values are ignored. This is a hack to filter out unused argv.
+            parser.add_argument("--single", default=False, action='store_true')
+            parser.add_argument("--mpirun", default=None)
+            _args, additional = parser.parse_known_args()
 
             # make the test directory exists
             self._initialize_testdir()
@@ -197,6 +200,7 @@ class Tester(BaseTester):
             # now call with mpirun
             mpirun = args.mpirun.split()
             cmdargs = [sys.executable, sys.argv[0], '--mpisub', '--mpisub-site-dir=' + site_dir]
+
             os.execvp(mpirun[0], mpirun + cmdargs + additional)
             sys.exit(1)
 
@@ -229,9 +233,7 @@ class Tester(BaseTester):
         code = None
         with self._run_from_testdir(args):
             code = self._test(config, **kws)
-            
-        self.comm.barrier()
-        
+
         if args.mpisub:
             if code != 0:
                 # if any rank has a failure, print the error and abort the world.
