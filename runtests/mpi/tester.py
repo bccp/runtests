@@ -67,12 +67,14 @@ def MPITest(commsize):
                 
             color = 0 if MPI.COMM_WORLD.rank < size else 1
             comm = MPI.COMM_WORLD.Split(color)
-            if color == 0:
-                rt = func(*args, comm=comm)
-            MPI.COMM_WORLD.barrier()
-            if color == 1:
-                rt = None
-                #pytest.skip("rank %d not needed for comm of size %d" %(MPI.COMM_WORLD.rank, size))
+            try:
+                if color == 0:
+                    rt = func(*args, comm=comm)
+                if color == 1:
+                    rt = None
+                    #pytest.skip("rank %d not needed for comm of size %d" %(MPI.COMM_WORLD.rank, size))
+            finally:
+                MPI.COMM_WORLD.barrier()
                 
             return rt
         wrapped.__name__ = func.__name__
@@ -161,6 +163,7 @@ class Tester(BaseTester):
         
     def main(self, argv):
         
+        argv.append('-x')
         config = self._get_pytest_config(argv)
         args = config.known_args_namespace
         
