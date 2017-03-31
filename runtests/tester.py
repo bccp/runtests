@@ -236,7 +236,7 @@ class Tester(object):
         # easy_install won't install to a path that Python by default cannot see
         # and isn't on the PYTHONPATH.  Plus, it has to exist.
         for dir in site_dirs:
-            basedir = os.path.basename(dir)
+            basedir = os.path.dirname(dir)
             if not os.path.exists(basedir):
                 os.makedirs(basedir)
 
