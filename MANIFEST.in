@@ -1,0 +1,2 @@
+include runtests/tests/*.py
+include runtests/mpi/tests/*.py
