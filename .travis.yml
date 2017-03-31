@@ -22,9 +22,10 @@ install:
 
 script: 
     - python ./runtests.py runtests/tests/test_regular.py
-    - python ./runtests-mpi.py runtests/mpi/tests/test_mpiworld.py --mpirun
+    - python ./runtests-mpi.py --single runtests/tests/test_regular.py
+    - python ./runtests-mpi.py runtests/mpi/tests/test_mpiworld.py
     # expecting a failure for uncollective
-    - if python ./runtests-mpi.py runtests/mpi/tests/test_uncollective.py --mpirun; then false; fi;
+    - if python ./runtests-mpi.py runtests/mpi/tests/test_uncollective.py; then false; fi;
     - bash check_tag.sh runtests/version.py
 
 deploy:
