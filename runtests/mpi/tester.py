@@ -1,4 +1,3 @@
-from .. import conftest
 from ..tester import Tester as BaseTester
 
 import pytest
@@ -146,8 +145,26 @@ class Tester(BaseTester):
         $ python runtests.py --mpirun="mpirun -np 4" my/module
         $ python runtests.py --mpirun="mpirun -np 4"
     """
-    plugins = [conftest.build, conftest.mpi]
-    
+
+    @staticmethod
+    def pytest_addoption(parser):
+        """
+        Add command-line options to specify MPI and coverage configuration
+        """
+        BaseTester.pytest_addoption(parser)
+
+        parser.addoption("--mpirun", default="mpirun -n 3",
+                help="Select MPI launcher, e.g. mpirun -n 3")
+
+        parser.addoption("--single", default=False, action='store_true',
+                help="Do not run via MPI launcher. ")
+
+        parser.addoption("--mpisub", action="store_true", default=False,
+                help="run process as a mpisub")
+
+        parser.addoption("--mpisub-site-dir", default=None, help="site-dir in mpisub")
+
+
     def __init__(self, *args, **kwargs):
         """
         Parameters
