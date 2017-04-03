@@ -33,13 +33,14 @@ Follow traditional pytest setup. Then vendor runtests.py or runtests-mpi.py into
 *All pytest arguments are passed through.* For example, '-v', '-x' `--pdb`.
 
 1. Running tests the usual way
-
-    python runtests.py
+    ```
+        python runtests.py
+    ```
 
 2. Running a specific test `test_core.py::test_basic_function`
-
-    python runtests.py test_core.py::test_basic_function
-
+    ```
+        python runtests.py test_core.py::test_basic_function
+    ```
 
 ### MPI Projects, vendored from `runtests-mpi.py`
 
@@ -50,18 +51,19 @@ MPI Tests always stop at the first error; because MPI is not fault tolerant [1].
 [1] : https://www.open-mpi.org/faq/?category=ft#ft-future
 
 1. Running tests with 4 MPI ranks
-
-    python runtests.py
+    ```
+        python runtests.py
+    ```
 
 2. Running tests with 1 MPI rank
-
-    python runtests.py --single
+    ```
+        python runtests.py --single
+    ```
 
 3. Running tests with a customized MPI launcher
-
-    python runtests.py --mpirun="mpirun -np 4"
-
-
+    ```
+        python runtests.py --mpirun="mpirun -np 4"
+    ```
 
 ## Defining MPI UnitTests: MPITest decorator
 
@@ -71,36 +73,37 @@ find a reasonable refactoring of the package.
 `MPITest` decorator allows testing with different MPI communicator sizes.
 
 Example:
-
+```
     from runtests.mpi import MPITest
 
     @MPIWorld(size=[1, 2, 3, 4])
     def test_myfunction(comm):
         result = myfunction(comm)
         assert result # or ....
-
-## Useful tricks
+```
+## Tricks
 
 
 1. Launching pdb on the first error
 
-    # non MPI
-    python runtests.py --pdb
+    ```
+        # non MPI
+        python runtests.py --pdb
 
 
-    # MPI
-    python runtests-mpi.py --single --pdb
+        # MPI
+        python runtests-mpi.py --single --pdb
+    ```
 
 2. Launchging a shell with the module ready to be imported. The shell will start in
    an empty directory where runtests would have ran the tests.
 
-    python runtests.py --shell
+    ```
+        python runtests.py --shell
+    ```
 
-
-## Fun fact / Caveats
-
-1. Testing runtests itself requires an installed version of runtests.
-This is because the example scripts we use for testing runtests,
-refuses to import from the source code directory.
+3. Testing runtests itself requires an installed version of runtests.
+   This is because the example scripts we use for testing runtests,
+   refuses to import from the source code directory.
 
 
