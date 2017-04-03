@@ -174,39 +174,30 @@ class Tester(BaseTester):
         
         # import project from system path
         args.pyargs = True
-                        
-        # mpi subs do not build!
-        if args.mpisub:
-            args.no_build = True # master does the building
-                        
-        # build the project, returning the site directory
-        site_dir = self._do_build(args)
 
-        if args.shell:
-            self._do_shell(args, config)
+        # build / setup on the master
+        if not args.mpisub:
+            self._initialize_dirs()
 
-        if not args.single and not args.mpisub:
-            
-            # extract the mpirun run argument
-            parser = ArgumentParser(add_help=False)
-            # these values are ignored. This is a hack to filter out unused argv.
-            parser.add_argument("--single", default=False, action='store_true')
-            parser.add_argument("--mpirun", default=None)
-            _args, additional = parser.parse_known_args()
+            site_dir = self._do_build(args)
 
-            # make the test directory exists
-            self._initialize_testdir()
+            if args.build_only:
+                sys.exit(0)
 
-            # now call with mpirun
-            mpirun = args.mpirun.split()
-            cmdargs = [sys.executable, sys.argv[0], '--mpisub', '--mpisub-site-dir=' + site_dir]
+            if args.shell:
+                self._do_shell(args, config)
 
-            os.execvp(mpirun[0], mpirun + cmdargs + additional)
-            sys.exit(1)
+            if not args.single:
+                self._launch_mpisub(args, site_dir)
 
-        if args.build_only:
-            sys.exit(0)
-                    
+        else:
+            # test on mpisub.
+            if args.mpisub_site_dir:
+                site_dir = args.mpisub_site_dir
+                sys.path.insert(0, site_dir)
+                os.environ['PYTHONPATH'] = site_dir
+
+        # if we are here, we will run the tests, either as sub or single
         # fix the path of the modules we are testing
         config.args = self._fix_test_paths(site_dir, config.args) 
 
@@ -259,25 +250,29 @@ class Tester(BaseTester):
         else:
             sys.exit(code)
         
-    def _do_build(self, args):
-        
-        site_dir = super(Tester, self)._do_build(args)
-            
-        if args.mpisub_site_dir:
-            site_dir = args.mpisub_site_dir
-            sys.path.insert(0, site_dir)
-            os.environ['PYTHONPATH'] = site_dir
-        return site_dir
-        
+    def _launch_mpisub(self, args, site_dir):
+        # extract the mpirun run argument
+        parser = ArgumentParser(add_help=False)
+        # these values are ignored. This is a hack to filter out unused argv.
+        parser.add_argument("--single", default=False, action='store_true')
+        parser.add_argument("--mpirun", default=None)
+        _args, additional = parser.parse_known_args()
+
+        # now call with mpirun
+        mpirun = args.mpirun.split()
+        cmdargs = [sys.executable, sys.argv[0], '--mpisub', '--mpisub-site-dir=' + site_dir]
+
+        os.execvp(mpirun[0], mpirun + cmdargs + additional)
+        sys.exit(1)
+
     def _sleep(self):
         time.sleep(0.04 * self.comm.rank)
-        
+
     @contextlib.contextmanager
     def _run_from_testdir(self, args):
-        
+
         cwd = os.getcwd()
-        self._initialize_testdir()
-        
+
         try:
             if args.mpisub:
                 assert(os.path.exists(self.TEST_DIR))

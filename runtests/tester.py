@@ -10,6 +10,15 @@ import shutil
 import subprocess
 import time
 
+def _make_clean_dir(path):
+    try:
+        shutil.rmtree(path)
+    except OSError:
+        pass
+    try:
+        os.makedirs(path)
+    except OSError:
+        pass
 
 class Tester(object):
     """
@@ -41,7 +50,14 @@ class Tester(object):
         self.EXTRA_PATH = extra_path
         self.PROJECT_MODULE = module
         self.TEST_DIR = os.path.join(self.ROOT_DIR, 'build', 'test')
-        
+        self.DEST_DIR = os.path.join(self.ROOT_DIR, 'build', 'testenv')
+
+        from distutils.sysconfig import get_python_lib
+        site_dir = get_python_lib(prefix=self.DEST_DIR, plat_specific=True)
+        site_dir_noarch = get_python_lib(prefix=self.DEST_DIR, plat_specific=False)
+
+        self.SITE_DIRS = [site_dir, site_dir_noarch]
+
     def main(self, argv):
         """
         The main function to run the tests
@@ -54,15 +70,18 @@ class Tester(object):
         # initialize the pytest configuration from the command-line args
         config = self._get_pytest_config(argv)
         args = config.known_args_namespace
-        
+
+        # make the test directory exists
+        self._initialize_dirs()
+
         # print help and exit
         if args.help:
             return config.hook.pytest_cmdline_main(config=config)
-        
+
         # import project from system path
         # this forces pytest to import the freshly built package
         args.pyargs = True
-                        
+
         # build the project, returning the site directory
         site_dir = self._do_build(args)
 
@@ -71,13 +90,10 @@ class Tester(object):
 
         if args.build_only:
             sys.exit(0)
-                    
+
         # fix the path of the modules we are testing
         # so they point to site_dir
         config.args = self._fix_test_paths(site_dir, config.args) 
-
-        # make sure the test directory exists
-        self._initialize_testdir()
 
         # extract the coverage-related options
         covargs = {}
@@ -117,12 +133,19 @@ class Tester(object):
         Build the project and return the site directory in the 
         build/ directory
         """
-        site_dir='.' # use source directory by default
         if not args.no_build:
-            site_dir = self._build_project(args)
-            sys.path.insert(0, site_dir)
-            os.environ['PYTHONPATH'] = site_dir
-        
+            self._build_project(args)
+
+        for site_dir in self.SITE_DIRS:
+            if os.path.exists(os.path.join(site_dir, self.PROJECT_MODULE)):
+                break
+        else:
+            print("Package %s not properly installed" % self.PROJECT_MODULE)
+            sys.exit(1)
+
+        sys.path.insert(0, site_dir)
+        os.environ['PYTHONPATH'] = site_dir
+
         return site_dir
 
     def _do_shell(self, args, config):
@@ -142,8 +165,7 @@ class Tester(object):
         to ``build/test``
         """
         cwd = os.getcwd()
-        self._initialize_testdir()
-        
+
         try:
             os.chdir(self.TEST_DIR)
             yield
@@ -175,20 +197,13 @@ class Tester(object):
             
         return config
     
-    def _initialize_testdir(self):
+    def _initialize_dirs(self):
         """
         Initialize the ``build/test/`` directory
         """
-        try:
-            shutil.rmtree(self.TEST_DIR)
-        except OSError:
-            pass
-        try:
-            os.makedirs(self.TEST_DIR)
-        except OSError:
-            pass
-    
-    
+        _make_clean_dir(self.TEST_DIR)
+        _make_clean_dir(self.DEST_DIR)
+
     def _fix_test_paths(self, site_dir, args):
         """
         Fix the paths of tests to run to point to the corresponding
@@ -200,8 +215,7 @@ class Tester(object):
             p[0] = os.path.join(site_dir, p[0])
             return '::'.join(p)
         return [fix_test_path(x) for x in args]
-    
-    
+
     def _build_project(self, args):
         """
         Build a dev version of the project.
@@ -214,18 +228,11 @@ class Tester(object):
 
         root_ok = [os.path.exists(os.path.join(self.ROOT_DIR, fn))
                    for fn in self.PROJECT_ROOT_FILES]
+
         if not all(root_ok):
             print("To build the project, run runtests.py in "
                   "git checkout or unpacked source")
             sys.exit(1)
-
-        dst_dir = os.path.join(self.ROOT_DIR, 'build', 'testenv')
-
-        from distutils.sysconfig import get_python_lib
-        site_dir = get_python_lib(prefix=dst_dir, plat_specific=True)
-        site_dir_noarch = get_python_lib(prefix=dst_dir, plat_specific=False)
-
-        site_dirs = [site_dir, site_dir_noarch]
 
         env = dict(os.environ)
         cmd = [sys.executable, 'setup.py']
@@ -235,13 +242,12 @@ class Tester(object):
 
         # easy_install won't install to a path that Python by default cannot see
         # and isn't on the PYTHONPATH.  Plus, it has to exist.
-        for dir in site_dirs:
+        for dir in self.SITE_DIRS:
             basedir = os.path.dirname(dir)
             if not os.path.exists(basedir):
                 os.makedirs(basedir)
 
-        env['PYTHONPATH'] = ':'.join(site_dirs)
-
+        env['PYTHONPATH'] = ':'.join(self.SITE_DIRS)
 
         if args.debug:
             # assume everyone who debugs uses gcc/gfortran
@@ -262,11 +268,11 @@ class Tester(object):
                 use_setuptools = False
 
         if use_setuptools:
-            cmd += ['install', '--prefix=' + dst_dir,
+            cmd += ['install', '--prefix=' + self.DEST_DIR,
                     '--single-version-externally-managed',
-                    '--record=' + dst_dir + 'tmp_install_log.txt']
+                    '--record=' + self.DEST_DIR + 'tmp_install_log.txt']
         else:
-            cmd += ['install', '--prefix=' + dst_dir]
+            cmd += ['install', '--prefix=' + self.DEST_DIR]
 
 
         if args.show_build_log:
@@ -304,11 +310,3 @@ class Tester(object):
                 print("Build failed!")
             sys.exit(1)
 
-        for site_dir in site_dirs:
-            if os.path.exists(os.path.join(site_dir, self.PROJECT_MODULE)):
-                break
-        else:
-            print("Package %s not properly installed" % self.PROJECT_MODULE)
-            sys.exit(1)
-
-        return site_dir
