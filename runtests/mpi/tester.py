@@ -201,18 +201,6 @@ class Tester(BaseTester):
         # fix the path of the modules we are testing
         config.args = self._fix_test_paths(site_dir, config.args) 
 
-        # reset the output
-        if args.mpisub:
-
-            self.oldstdout = sys.stdout
-            self.oldstderr = sys.stderr
-            newstdout = StringIO()
-            newstderr = StringIO()
-
-            if self.comm.rank != 0:
-                sys.stdout = newstdout
-                sys.stderr = newstderr
-
         # test kwargs
         kws = {}
         kws['with_coverage'] = args.with_coverage
@@ -220,36 +208,31 @@ class Tester(BaseTester):
         kws['html_cov'] = args.html_cov
         kws['comm'] = self.comm
 
-        # run the tests
-        code = None
-        with self._run_from_testdir(args):
-            code = self._test(config, **kws)
-
         if args.mpisub:
-            if code != 0:
-                # if any rank has a failure, print the error and abort the world.
+            self._begin_capture()
+
+        # run the tests
+        try:
+            code = None
+            with self._run_from_testdir(args):
+                code = self._test(config, **kws)
+
+        except:
+            if args.mpisub:
                 self._sleep()
-                self.oldstderr.write("Test Failure due to rank %d\n" % self.comm.rank)
-                self.oldstderr.write(newstdout.getvalue())
-                self.oldstderr.write(newstderr.getvalue())
+                self.oldstderr.write("Fatal Error on Rank %d\n" % self.comm.rank)
+                self.oldstderr.write(traceback.format_exc())
                 self.oldstderr.flush()
                 self.comm.Abort(-1)
+            else:
+                traceback.print_exc()
+                sys.exit(1)
 
-            self.comm.barrier()
-            with Rotator(self.comm):
-                if self.comm.rank != 0:
-                    self.oldstderr.write("\n")
-                    self.oldstderr.write("=" * 32 + " Rank %d / %d " % (self.comm.rank, self.comm.size) + "=" * 32)
-                    self.oldstderr.write("\n")
-                    self.oldstderr.write(fix_titles(newstdout.getvalue()))
-                    self.oldstderr.write(fix_titles(newstderr.getvalue()))
-                    self.oldstderr.flush()
-
-            sys.exit(0)
-
+        if args.mpisub:
+            self._end_capture_and_exit(code)
         else:
             sys.exit(code)
-        
+
     def _launch_mpisub(self, args, site_dir):
         # extract the mpirun run argument
         parser = ArgumentParser(add_help=False)
@@ -268,27 +251,52 @@ class Tester(BaseTester):
     def _sleep(self):
         time.sleep(0.04 * self.comm.rank)
 
+    def _begin_capture(self):
+        self.oldstdout = sys.stdout
+        self.oldstderr = sys.stderr
+        self.newstdout = StringIO()
+        self.newstderr = StringIO()
+
+        if self.comm.rank != 0:
+            sys.stdout = self.newstdout
+            sys.stderr = self.newstderr
+
+    def _end_capture_and_exit(self, code):
+        if code != 0:
+            # if any rank has a failure, print the error and abort the world.
+            self._sleep()
+            if self.comm.rank != 0:
+                self.oldstderr.write("Test Failure due to rank %d\n" % self.comm.rank)
+                self.oldstderr.write(self.newstdout.getvalue())
+                self.oldstderr.write(self.newstderr.getvalue())
+                self.oldstderr.flush()
+            self.comm.Abort(-1)
+
+        self.comm.barrier()
+        with Rotator(self.comm):
+            if self.comm.rank != 0:
+                self.oldstderr.write("\n")
+                self.oldstderr.write("=" * 32 + " Rank %d / %d " % (self.comm.rank, self.comm.size) + "=" * 32)
+                self.oldstderr.write("\n")
+                self.oldstderr.write(fix_titles(self.newstdout.getvalue()))
+                self.oldstderr.write(fix_titles(self.newstderr.getvalue()))
+                self.oldstderr.flush()
+
+        sys.exit(0)
+
     @contextlib.contextmanager
     def _run_from_testdir(self, args):
-
+        if not args.mpisub:
+            with super(Tester, self)._run_from_testdir(args):
+                yield
+                return
         cwd = os.getcwd()
 
         try:
-            if args.mpisub:
-                assert(os.path.exists(self.TEST_DIR))
-                self.comm.barrier()
+            assert(os.path.exists(self.TEST_DIR))
+            self.comm.barrier()
             os.chdir(self.TEST_DIR)
             yield
-        except:
-            if args.mpisub:
-                self._sleep()
-                self.oldstderr.write("Fatal Error on Rank %d\n" % self.comm.rank)
-                self.oldstderr.write(traceback.format_exc())
-                self.oldstderr.flush()
-                self.comm.Abort(-1)
-            else:
-                traceback.print_exc()
-                sys.exit(1)
         finally:
             os.chdir(cwd)
     

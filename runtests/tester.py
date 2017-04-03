@@ -102,13 +102,16 @@ class Tester(object):
         covargs['html_cov'] = args.html_cov
 
         # run the tests
-        code = None
-        with self._run_from_testdir(args):
-            code = self._test(config, **covargs)
-        
-        # and exit  
+        try:
+            code = None
+            with self._run_from_testdir(args):
+                code = self._test(config, **covargs)
+        except:
+            traceback.print_exc()
+            sys.exit(1)
+
         sys.exit(code)
-                
+
     def _test(self, config, **kwargs):
         """
         Run the actual tests with optional coverage -- a wrapper around 
@@ -169,9 +172,6 @@ class Tester(object):
         try:
             os.chdir(self.TEST_DIR)
             yield
-        except:
-            traceback.print_exc()
-            sys.exit(1)
         finally:
             os.chdir(cwd)
     
