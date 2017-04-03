@@ -106,4 +106,7 @@ Example:
    This is because the example scripts we use for testing runtests,
    refuses to import from the source code directory.
 
+4. setup.py works (or fails) like 'make'. Therefore sometimes it is useful to purge the
+   build/ directory manually. We plan to add a '--clean-build' argument for this.
+
 
