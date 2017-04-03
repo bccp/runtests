@@ -48,6 +48,19 @@ Examples:
         result = myfunction(comm)
         assert result # or ....
 
+## Useful tricks
+
+
+1. Launching pdb on the first error
+
+    # non MPI
+    python runtests.py --pdb
+
+
+    # MPI
+    python runtests-mpi.py --single --pdb
+
+2. Add more tricks.
 
 ## Caveats
 
