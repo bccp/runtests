@@ -11,6 +11,7 @@ import subprocess
 import time
 
 def _make_clean_dir(path):
+    print("Purging %s ..." % path)
     try:
         shutil.rmtree(path)
     except OSError:
@@ -51,6 +52,7 @@ class Tester(object):
         self.PROJECT_MODULE = module
         self.TEST_DIR = os.path.join(self.ROOT_DIR, 'build', 'test')
         self.DEST_DIR = os.path.join(self.ROOT_DIR, 'build', 'testenv')
+        self.BUILD_DIR = os.path.join(self.ROOT_DIR, 'build')
 
         from distutils.sysconfig import get_python_lib
         site_dir = get_python_lib(prefix=self.DEST_DIR, plat_specific=True)
@@ -71,12 +73,12 @@ class Tester(object):
         config = self._get_pytest_config(argv)
         args = config.known_args_namespace
 
-        # make the test directory exists
-        self._initialize_dirs()
-
         # print help and exit
         if args.help:
             return config.hook.pytest_cmdline_main(config=config)
+
+        # make the test directory exists
+        self._initialize_dirs(args)
 
         # import project from system path
         # this forces pytest to import the freshly built package
@@ -197,12 +199,22 @@ class Tester(object):
             
         return config
     
-    def _initialize_dirs(self):
+    def _initialize_dirs(self, args):
         """
         Initialize the ``build/test/`` directory
         """
+        if args.clean_build:
+            _make_clean_dir(self.BUILD_DIR)
+
+        if not args.no_build:
+            _make_clean_dir(self.DEST_DIR)
+
         _make_clean_dir(self.TEST_DIR)
-        _make_clean_dir(self.DEST_DIR)
+
+    def _clean_build(self):
+        """
+        Clean the build directory.
+        """
 
     def _fix_test_paths(self, site_dir, args):
         """
@@ -249,7 +261,7 @@ class Tester(object):
 
         env['PYTHONPATH'] = ':'.join(self.SITE_DIRS)
 
-        if args.debug:
+        if args.enable_debug:
             # assume everyone who debugs uses gcc/gfortran
             env['OPT'] = '-O0 -ggdb'
             env['FOPT'] = '-O0 -ggdb'

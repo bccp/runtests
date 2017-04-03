@@ -168,16 +168,17 @@ class Tester(BaseTester):
 
         config = self._get_pytest_config(argv)
         args = config.known_args_namespace
+
         # print help and exit
         if args.help:
             return config.hook.pytest_cmdline_main(config=config)
-        
+
         # import project from system path
         args.pyargs = True
 
         # build / setup on the master
         if not args.mpisub:
-            self._initialize_dirs()
+            self._initialize_dirs(args)
 
             site_dir = self._do_build(args)
 
