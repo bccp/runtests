@@ -63,13 +63,14 @@ MPI Tests always stop at the first error; because MPI is not fault tolerant [1].
 
 
 
-## Unit Test with MPI via runtests.mpi
+## Defining MPI UnitTests: MPITest decorator
 
-This feature may belong to a different package; it resides here for now as a feature.
+This feature may belong to a different package; it resides here for now before we can
+find a reasonable refactoring of the package.
 
 `MPITest` decorator allows testing with different MPI communicator sizes.
 
-Examples:
+Example:
 
     from runtests.mpi import MPITest
 
@@ -90,15 +91,15 @@ Examples:
     # MPI
     python runtests-mpi.py --single --pdb
 
-2. Launchging a shell with the module ready to be imported
+2. Launchging a shell with the module ready to be imported. The shell will start in
+   an empty directory where runtests would have ran the tests.
 
     python runtests.py --shell
 
 
-## Caveats
+## Fun fact / Caveats
 
-Testing runtests itself requires an installed version of runtests.
-
+1. Testing runtests itself requires an installed version of runtests.
 This is because the example scripts we use for testing runtests,
 refuses to import from the source code directory.
 
