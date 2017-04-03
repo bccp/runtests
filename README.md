@@ -17,20 +17,50 @@ We use runtests in `nbodykit` and a variety of packages.
 
 ## Project setup
 
-Follow traditional pytest setup. Then drop in a `runtests.py` similar to the one provided
-with `runtests` in the source code root directory. Then you are ready to go.
+Follow traditional pytest setup. Then vendor runtests.py or runtests-mpi.py into the project root directory.
 
-Examples:
+1. For MPI Projects, copy `runtests-mpi.py` to `runtests.py`.
 
-    # for non MPI applications
+2. For nonMPI Projects, copy `runtests.py` to `runtests.py`.
+
+3. Edit the file, change the package module name.
+
+
+## Usage
+
+### Regular Projects vendored from `runtests.py`
+
+*All pytest arguments are passed through.* For example, '-v', '-x' `--pdb`.
+
+1. Running tests the usual way
 
     python runtests.py
 
-    # for MPI applications
+2. Running a specific test `test_core.py::test_basic_function`
 
-    python runtests.py --mpirun
+    python runtests.py test_core.py::test_basic_function
+
+
+### MPI Projects, vendored from `runtests-mpi.py`
+
+*All pytest arguments are passed through.*
+
+MPI Tests always stop at the first error; because MPI is not fault tolerant [1].
+
+[1] : https://www.open-mpi.org/faq/?category=ft#ft-future
+
+1. Running tests with 4 MPI ranks
+
+    python runtests.py
+
+2. Running tests with 1 MPI rank
+
+    python runtests.py --single
+
+3. Running tests with a customized MPI launcher
 
     python runtests.py --mpirun="mpirun -np 4"
+
 
 
 ## Unit Test with MPI via runtests.mpi
@@ -60,7 +90,10 @@ Examples:
     # MPI
     python runtests-mpi.py --single --pdb
 
-2. Add more tricks.
+2. Launchging a shell with the module ready to be imported
+
+    python runtests.py --shell
+
 
 ## Caveats
 
