@@ -2,15 +2,13 @@
 
 [![Build Status](https://travis-ci.org/rainwoodman/runtests.svg?branch=master)](https://travis-ci.org/rainwoodman/runtests)
 
-A simple tools for building packages, installing, then running the tests.
-The idea came from runtests.py in numpy and scipy projects.
+A simple tools for incrementally building packages, then testing against installed version.
 
-This way, we ensure the tests are run as if they have been installed to a non-standard
-location in the filesystem. Two benefits:
+The idea came from runtests.py in numpy and scipy projects:
 
-- decoupling testing environment from the source code; discovering mis-installed files, etc.
-- ensures the package makes little assumption about install location
-- binaries are properly compiled as it they are installed, without needing the quirky 'develop' egg-links.
+- incremental build is fast: encouraging developers to test frequently;
+- existing installation of the software package is not overwritten;
+- binaries are properly compiled -- and optionally in debug mode.
 
 Testing of MPI application is also supported via the `[mpi]` feature.
 We use runtests in `nbodykit` and a variety of packages.
