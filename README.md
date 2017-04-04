@@ -107,4 +107,4 @@ Example:
 4. setup.py works (or fails) like 'make'. Therefore sometimes it is useful to purge the
    build/ directory manually by adding '--clean-build' argument.
 
-
+5. Install pytest-profiling and get support to profiling.

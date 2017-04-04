@@ -1,5 +1,4 @@
 from .coverage import Coverage
-
 import pytest
 import traceback
 import sys
@@ -224,22 +223,24 @@ class Tester(object):
         command-line arguments
         """
         import _pytest.config as _config
-        
+
+        plugins = [self]
+
         # disable pytest-cov
         argv += ['-p', 'no:pytest_cov']
-        
+
         # get the pytest configuration object
         try:
-            config = _config._prepareconfig(argv, [self])
+            config = _config._prepareconfig(argv, plugins)
         except _config.ConftestImportFailure as e:
             tw = _config.py.io.TerminalWriter(sys.stderr)
             for line in traceback.format_exception(*e.excinfo):
                 tw.line(line.rstrip(), red=True)
             tw.line("ERROR: could not load %s\n" % (e.path), red=True)
             raise 
-            
+
         return config
-    
+
     def _initialize_dirs(self, args):
         """
         Initialize the ``build/test/`` directory
