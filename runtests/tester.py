@@ -98,6 +98,7 @@ class Tester(object):
         site_dir = get_python_lib(prefix=self.DEST_DIR, plat_specific=True)
         site_dir_noarch = get_python_lib(prefix=self.DEST_DIR, plat_specific=False)
 
+        # the true site dir will be found after build_project.
         self.SITE_DIRS = [site_dir, site_dir_noarch]
 
     def main(self, argv):
@@ -158,7 +159,7 @@ class Tester(object):
         """
         Run the actual tests with optional coverage -- a wrapper around 
         the pytest calling sequence
-        
+
         Parameters
         ----------
         config : 
@@ -172,7 +173,7 @@ class Tester(object):
                 return config.hook.pytest_cmdline_main(config=config)
         finally:
             config._ensure_unconfigure()
-            
+
     def _do_build(self, args):
         """
         Build the project and return the site directory in the 

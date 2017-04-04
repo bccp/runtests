@@ -153,8 +153,8 @@ class Tester(BaseTester):
         """
         BaseTester.pytest_addoption(parser)
 
-        parser.addoption("--mpirun", default="mpirun -n 3",
-                help="Select MPI launcher, e.g. mpirun -n 3")
+        parser.addoption("--mpirun", default="mpirun -n 4",
+                help="Select MPI launcher, e.g. mpirun -n 4")
 
         parser.addoption("--single", default=False, action='store_true',
                 help="Do not run via MPI launcher. ")
@@ -209,6 +209,9 @@ class Tester(BaseTester):
                 self._launch_mpisub(args, site_dir)
 
         else:
+            capman = config.pluginmanager.getplugin('capturemanager')
+            if capman:
+                capman.suspendcapture()
             # test on mpisub.
             if args.mpisub_site_dir:
                 site_dir = args.mpisub_site_dir
@@ -264,6 +267,8 @@ class Tester(BaseTester):
         cmdargs = [sys.executable, sys.argv[0], '--mpisub', '--mpisub-site-dir=' + site_dir]
 
         os.execvp(mpirun[0], mpirun + cmdargs + additional)
+
+        # if we are here os.execvp has failed; bail
         sys.exit(1)
 
     def _sleep(self):
