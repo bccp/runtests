@@ -1,7 +1,6 @@
 from ..tester import Tester as BaseTester
 
 import pytest
-from mpi4py import MPI
 import traceback
 import warnings
 import sys
@@ -52,6 +51,7 @@ def MPITest(commsize):
     def test_stuff(comm):
         pass
     """
+    from mpi4py import MPI
     if not isinstance(commsize, (tuple, list)):
         commsize = (commsize,)
 
@@ -100,6 +100,7 @@ def MPIWorld(NTask, required=1, optional=False):
         If requirement not satistied, skip the test.
     """
     warnings.warn("This function is deprecated, use MPITest instead.", DeprecationWarning)
+    from mpi4py import MPI
 
     if not isinstance(NTask, (tuple, list)):
         NTask = (NTask,)
@@ -177,8 +178,12 @@ class Tester(BaseTester):
             extra paths to include on PATH when building
         """
         super(Tester, self).__init__(*args, **kwargs)
-        self.comm = MPI.COMM_WORLD
-        
+
+    @property
+    def comm(self):
+        from mpi4py import MPI
+        return MPI.COMM_WORLD
+
     def main(self, argv):
         # must bail after first dead test; avoiding a fault MPI collective state.
         argv.insert(1, '-x')
@@ -209,6 +214,7 @@ class Tester(BaseTester):
                 self._launch_mpisub(args, site_dir)
 
         else:
+
             capman = config.pluginmanager.getplugin('capturemanager')
             if capman:
                 capman.suspendcapture()
@@ -227,7 +233,6 @@ class Tester(BaseTester):
         kws['with_coverage'] = args.with_coverage
         kws['config_file'] = args.cov_config
         kws['html_cov'] = args.html_cov
-        kws['comm'] = self.comm
 
         if args.mpisub:
             self._begin_capture()
