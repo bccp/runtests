@@ -22,9 +22,9 @@ def _make_clean_dir(path):
 class Tester(object):
     """
     Run tests using pytest, building a fresh version of the project first.
-    
+
     Examples::
-        $ python runtests.py my/module 
+        $ python runtests.py my/module
         $ python runtests.py my/module/tests/test_abc.py
         $ python runtests.py
     """
@@ -66,7 +66,7 @@ class Tester(object):
     @staticmethod
     def pytest_collection_modifyitems(session, config, items):
         """
-        Modify the ordering of tests, such that the ordering will be 
+        Modify the ordering of tests, such that the ordering will be
         well-defined across all ranks running
         """
         items[:] = sorted(items, key=lambda x: str(x))
@@ -103,7 +103,7 @@ class Tester(object):
     def main(self, argv):
         """
         The main function to run the tests
-        
+
         Parameters
         ----------
         argv : list of str
@@ -135,7 +135,7 @@ class Tester(object):
 
         # fix the path of the modules we are testing
         # so they point to site_dir
-        config.args = self._fix_test_paths(site_dir, config.args) 
+        config.args = self._fix_test_paths(site_dir, config.args)
 
         # extract the coverage-related options
         covargs = {}
@@ -156,14 +156,14 @@ class Tester(object):
 
     def _test(self, config, **kwargs):
         """
-        Run the actual tests with optional coverage -- a wrapper around 
+        Run the actual tests with optional coverage -- a wrapper around
         the pytest calling sequence
 
         Parameters
         ----------
-        config : 
+        config :
             the pytest configuration object
-        kwargs : 
+        kwargs :
             additional keywords to pass to the Coverage class
         """
         try:
@@ -175,7 +175,7 @@ class Tester(object):
 
     def _do_build(self, args):
         """
-        Build the project and return the site directory in the 
+        Build the project and return the site directory in the
         build/ directory
         """
         if not args.no_build:
@@ -216,10 +216,10 @@ class Tester(object):
             yield
         finally:
             os.chdir(cwd)
-    
+
     def _get_pytest_config(self, argv):
         """
-        Return the ``pytest`` configuration object based on the 
+        Return the ``pytest`` configuration object based on the
         command-line arguments
         """
         import _pytest.config as _config
@@ -229,6 +229,12 @@ class Tester(object):
         # disable pytest-cov
         argv += ['-p', 'no:pytest_cov']
 
+        # Do not load any conftests initially.
+        # This is a hack to avoid ConftestImportFailure raised when the
+        # pytest does its initial import of conftests in the source directory.
+        # This prevents any manipulation of the command-line via conftests
+        argv += ['--noconftest']
+
         # get the pytest configuration object
         try:
             config = _config._prepareconfig(argv, plugins)
@@ -237,7 +243,11 @@ class Tester(object):
             for line in traceback.format_exception(*e.excinfo):
                 tw.line(line.rstrip(), red=True)
             tw.line("ERROR: could not load %s\n" % (e.path), red=True)
-            raise 
+            raise
+
+        # Restore the loading of conftests, which was disabled earlier
+        # Conftest files will now be loaded properly at test time
+        config.pluginmanager._noconftest = False
 
         return config
 
@@ -362,4 +372,3 @@ class Tester(object):
                     print(f.read())
                 print("Build failed!")
             sys.exit(1)
-
