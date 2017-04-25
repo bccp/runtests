@@ -108,3 +108,5 @@ Example:
    build/ directory manually by adding '--clean-build' argument.
 
 5. Install pytest-profiling and get support to profiling.
+
+6. Adding commandline arguments via conftest.py is not supported. (Issue #14) If this is a global behavior of the tester, then consider subclassing `Tester` in runtests.py instead. 
