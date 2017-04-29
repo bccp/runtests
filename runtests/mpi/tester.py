@@ -39,7 +39,7 @@ def MPITest(commsize):
 
     This converts the test to a generator test; therefore the
     underlyig test shall not be a generator test.
-    
+
     Parameters
     ----------
     commsize: scalar or tuple
@@ -58,12 +58,12 @@ def MPITest(commsize):
     sizes = sorted(list(commsize))
 
     def dec(func):
-        
+
         @pytest.mark.parametrize("size", sizes)
         def wrapped(size, *args):
-            if MPI.COMM_WORLD.size < size: 
+            if MPI.COMM_WORLD.size < size:
                 pytest.skip("Test skipped because world is too small. Include the test with mpirun -n %d" % (size))
-                
+
             color = 0 if MPI.COMM_WORLD.rank < size else 1
             comm = MPI.COMM_WORLD.Split(color)
             try:
@@ -74,19 +74,19 @@ def MPITest(commsize):
                     #pytest.skip("rank %d not needed for comm of size %d" %(MPI.COMM_WORLD.rank, size))
             finally:
                 MPI.COMM_WORLD.barrier()
-                
+
             return rt
         wrapped.__name__ = func.__name__
         return wrapped
     return dec
-    
-    
+
+
 def MPIWorld(NTask, required=1, optional=False):
-    """ 
+    """
     A decorator that repeatedly calls the wrapped function,
     with communicators of varying sizes.
-    
-    .. note:: Deprecated 
+
+    .. note:: Deprecated
         See :func:`MPITest` instead
 
     Parameters
@@ -111,18 +111,18 @@ def MPIWorld(NTask, required=1, optional=False):
     maxsize = max(required)
     if MPI.COMM_WORLD.size < maxsize and not optional:
         raise ValueError("Test Failed because the world is too small. Increase to mpirun -n %d, current size = %d" % (maxsize, MPI.COMM_WORLD.size))
-        
+
     sizes = sorted(set(list(required) + list(NTask)))
     def dec(func):
-        
+
         @pytest.mark.parametrize("size", sizes)
         def wrapped(size, *args):
-            if MPI.COMM_WORLD.size < size: 
+            if MPI.COMM_WORLD.size < size:
                 pytest.skip("Test skipped because world is too small. Include the test with mpirun -n %d" % (size))
 
             color = 0 if MPI.COMM_WORLD.rank < size else 1
             comm = MPI.COMM_WORLD.Split(color)
-            
+
             if color == 0:
                 rt = func(*args, comm=comm)
 
@@ -136,9 +136,9 @@ def MPIWorld(NTask, required=1, optional=False):
     return dec
 
 class Tester(BaseTester):
-    """        
+    """
     Run MPI-enabled tests using pytest, building the project first.
-    
+
     Examples::
         $ python runtests.py my/module
         $ python runtests.py --single my/module
@@ -226,13 +226,13 @@ class Tester(BaseTester):
 
         # if we are here, we will run the tests, either as sub or single
         # fix the path of the modules we are testing
-        config.args = self._fix_test_paths(site_dir, config.args) 
+        config.args = self._fix_test_paths(site_dir, config.args)
 
-        # test kwargs
-        kws = {}
-        kws['with_coverage'] = args.with_coverage
-        kws['config_file'] = args.cov_config
-        kws['html_cov'] = args.html_cov
+        # extract the coverage-related options
+        covargs = {}
+        covargs['with_coverage'] = args.with_coverage
+        covargs['config_file'] = args.cov_config
+        covargs['html_cov'] = args.html_cov
 
         if args.mpisub:
             self._begin_capture()
@@ -241,7 +241,7 @@ class Tester(BaseTester):
         try:
             code = None
             with self._run_from_testdir(args):
-                code = self._test(config, **kws)
+                code = self._test(config, comm=self.comm, **covargs)
 
         except:
             if args.mpisub:
@@ -327,4 +327,3 @@ class Tester(BaseTester):
             yield
         finally:
             os.chdir(cwd)
-    
