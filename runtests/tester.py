@@ -328,6 +328,8 @@ class Tester(object):
             import re
             if re.search('from\s\s*setuptools', text):
                 use_setuptools = True
+            elif re.search('import\s\s*setuptools', text):
+                use_setuptools = True
             else:
                 use_setuptools = False
 
