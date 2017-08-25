@@ -21,11 +21,11 @@ install:
     - python setup.py install
 
 script: 
-    - python ./runtests.py runtests/tests/test_regular.py
-    - python ./runtests-mpi.py --single runtests/tests/test_regular.py
-    - python ./runtests-mpi.py runtests/mpi/tests/test_mpiworld.py
+    - python ./run-tests.py runtests/tests/test_regular.py
+    - python ./run-mpitests.py --single runtests/tests/test_regular.py
+    - python ./run-mpitests.py runtests/mpi/tests/test_mpiworld.py
     # expecting a failure for uncollective
-    - if python ./runtests-mpi.py runtests/mpi/tests/test_uncollective.py; then false; fi;
+    - if python ./run-mpitests.py runtests/mpi/tests/test_uncollective.py; then false; fi;
     - bash check_tag.sh runtests/version.py
 
 deploy:
