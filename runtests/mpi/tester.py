@@ -73,6 +73,7 @@ def MPITest(commsize):
                     rt = None
                     #pytest.skip("rank %d not needed for comm of size %d" %(MPI.COMM_WORLD.rank, size))
             finally:
+                comm.Free()
                 MPI.COMM_WORLD.barrier()
 
             return rt
@@ -130,6 +131,7 @@ def MPIWorld(NTask, required=1, optional=False):
             if color == 1:
                 #pytest.skip("rank %d not needed for comm of size %d" %(MPI.COMM_WORLD.rank, size))
                 rt = None
+            comm.Free()
             return rt
         wrapped.__name__ = func.__name__
         return wrapped
