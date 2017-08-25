@@ -15,32 +15,32 @@ We use runtests in `nbodykit` and a variety of packages.
 
 ## Project setup
 
-Follow traditional pytest setup. Then vendor runtests.py or runtests-mpi.py into the project root directory.
+Follow traditional pytest setup. Then vendor run-tests.py or run-mpitests.py into the project root directory.
 
-1. For MPI Projects, copy `runtests-mpi.py` to `runtests.py`.
+1. For MPI Projects, copy `run-testsmpi.py` to `run-tests.py`.
 
-2. For nonMPI Projects, copy `runtests.py` to `runtests.py`.
+2. For nonMPI Projects, copy `run-tests.py` to `run-tests.py`.
 
 3. Edit the file, change the package module name.
 
 
 ## Usage
 
-### Regular Projects vendored from `runtests.py`
+### Regular Projects vendored from `run-tests.py`
 
 *All pytest arguments are passed through.* For example, '-v', '-x' `--pdb`.
 
 1. Running tests the usual way
     ```
-        python runtests.py
+        python run-tests.py
     ```
 
 2. Running a specific test `test_core.py::test_basic_function`
     ```
-        python runtests.py test_core.py::test_basic_function
+        python run-tests.py test_core.py::test_basic_function
     ```
 
-### MPI Projects, vendored from `runtests-mpi.py`
+### MPI Projects, vendored from `run-mpitests.py`
 
 *All pytest arguments are passed through.*
 
@@ -50,17 +50,17 @@ MPI Tests always stop at the first error; because MPI is not fault tolerant [1].
 
 1. Running tests with 4 MPI ranks
     ```
-        python runtests.py
+        python run-tests.py
     ```
 
 2. Running tests with 1 MPI rank
     ```
-        python runtests.py --single
+        python run-tests.py --single
     ```
 
 3. Running tests with a customized MPI launcher
     ```
-        python runtests.py --mpirun="mpirun -np 4"
+        python run-tests.py --mpirun="mpirun -np 4"
     ```
 
 ## Defining MPI UnitTests: MPITest decorator
@@ -86,18 +86,18 @@ Example:
 
     ```
         # non MPI
-        python runtests.py --pdb
+        python run-tests.py --pdb
 
 
         # MPI
-        python runtests-mpi.py --single --pdb
+        python run-mpitests.py --single --pdb
     ```
 
 2. Launchging a shell with the module ready to be imported. The shell will start in
    an empty directory where runtests would have ran the tests.
 
     ```
-        python runtests.py --shell
+        python run-tests.py --shell
     ```
 
 3. Testing runtests itself requires an installed version of runtests.
@@ -109,4 +109,5 @@ Example:
 
 5. Install pytest-profiling and get support to profiling.
 
-6. Adding commandline arguments via conftest.py is not supported. (Issue #14) If this is a global behavior of the tester, then consider subclassing `Tester` in runtests.py instead. 
+6. Adding commandline arguments via conftest.py is not supported. (Issue #14)
+   If this is a global behavior of the tester, then consider subclassing `Tester` in run-tests.py instead. 
