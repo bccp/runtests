@@ -8,6 +8,7 @@ import os
 import contextlib
 import time
 from argparse import ArgumentParser
+from contextlib import contextmanager
 
 if sys.version_info[0] == 2:
     from cStringIO import StringIO
@@ -31,6 +32,24 @@ class Rotator(object):
         for i in range(self.comm.rank, self.comm.size):
             self.comm.Barrier()
         self.comm.Barrier()
+
+@contextmanager
+def nompi(comm):
+    errored = False
+    error = None
+    try:
+        yield
+    except Exception as e:
+        errored = True
+        error = e
+    finally:
+        anyerrored = any(comm.allgather(errored))
+
+    if anyerrored:
+        if error is None:
+            raise RuntimeError("Some ranks failed")
+        else:
+            raise error
 
 def MPITest(commsize):
     """

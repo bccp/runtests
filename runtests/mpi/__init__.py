@@ -1,1 +1,1 @@
-from .tester import Tester, MPITest, MPIWorld
+from .tester import Tester, MPITest, MPIWorld, nompi
