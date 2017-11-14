@@ -1,4 +1,5 @@
 from .coverage import Coverage
+from .benchmark import BenchmarkFixture
 import pytest
 import traceback
 import sys
@@ -7,6 +8,16 @@ import contextlib
 import shutil
 import subprocess
 import time
+
+def get_git_revision_short_hash():
+    null = open(os.devnull, 'w')
+    toret = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'], stderr=null)
+    return toret.strip().decode()
+
+def get_source_version(module):
+    null = open(os.devnull, 'w')
+    toret = subprocess.check_output(['python', 'setup.py', '--version'], stderr=null)
+    return toret.strip().decode()
 
 def _make_clean_dir(path):
     print("Purging %s ..." % path)
@@ -27,7 +38,48 @@ class Tester(object):
         $ python runtests.py my/module
         $ python runtests.py my/module/tests/test_abc.py
         $ python runtests.py
+        $ python runtests.py --bench
     """
+    @pytest.fixture(scope="session")
+    def session_benchmark(self, request):
+        """
+        A session-wide benchmark to time and record benchmarks.
+
+        When called, the benchmark fixture acts as a context manager.
+        """
+        comm = self.comm if hasattr(self, 'comm') else None
+
+        # determine the output dir
+        output_dir = request.config.getoption('bench_dir')
+        if output_dir is None:
+            output_dir = self.BENCHMARK_DIR
+
+        # initialize
+        kws = {'version':self.source_version, 'git_hash':self.source_git_hash}
+        benchmark = BenchmarkFixture(output_dir, comm=comm, **kws)
+
+        # yield to user
+        yield benchmark
+
+        # finalize by reporting (needs to be COLLECTIVE call)
+        benchmark.report()
+
+    @staticmethod
+    @pytest.fixture(scope="function")
+    def benchmark(session_benchmark, request):
+        """
+        A testing function benchmark.
+        """
+        # attach the name of the requesting function
+        func = request.node.function
+        mod, name = func.__module__, func.__name__
+        session_benchmark.qualname = mod + '.' + name
+
+        # add the testname
+        session_benchmark.testname = request.node.name
+
+        # return the session-wide benchmark
+        yield session_benchmark
 
     @staticmethod
     def pytest_addoption(parser):
@@ -62,6 +114,12 @@ class Tester(object):
                         metavar='path',
                         help=('config file for coverage, default: .coveragerc; '
                               'see http://coverage.readthedocs.io/en/coverage-4.3.4/config.html'))
+        parser.addoption("--bench-dir", type=str,
+                        help="the directory to write benchmark results; default is build/benchmarks")
+
+        parser.addoption("--bench", action="store_true", default=False,
+                        help="only run tests that use the 'benchmark' fixture")
+
 
     @staticmethod
     def pytest_collection_modifyitems(session, config, items):
@@ -69,6 +127,16 @@ class Tester(object):
         Modify the ordering of tests, such that the ordering will be
         well-defined across all ranks running
         """
+        def benchmark_filter(item):
+            if config.getoption('bench'):
+                return 'benchmark' in item.fixturenames
+            else:
+                return 'benchmark' not in item.fixturenames
+
+        # filter based on benchmarking
+        items[:] = [item for item in items if benchmark_filter(item)]
+
+        # sort the tests
         items[:] = sorted(items, key=lambda x: str(x))
 
     def __init__(self, package_file, module,
@@ -92,6 +160,7 @@ class Tester(object):
         self.TEST_DIR = os.path.join(self.ROOT_DIR, 'build', 'test')
         self.DEST_DIR = os.path.join(self.ROOT_DIR, 'build', 'testenv')
         self.BUILD_DIR = os.path.join(self.ROOT_DIR, 'build')
+        self.BENCHMARK_DIR = os.path.join(self.ROOT_DIR, 'build', 'benchmarks')
 
         from distutils.sysconfig import get_python_lib
         site_dir = get_python_lib(prefix=self.DEST_DIR, plat_specific=True)
@@ -99,6 +168,20 @@ class Tester(object):
 
         # the true site dir will be found after build_project.
         self.SITE_DIRS = [site_dir, site_dir_noarch]
+
+
+        # the source version
+        try:
+            self.source_version = get_source_version(module)
+        except:
+            self.source_version = None
+
+        # the git str
+        try:
+            self.source_git_hash = get_git_revision_short_hash()
+        except:
+            self.source_git_hash = None
+
 
     def main(self, argv):
         """
@@ -116,6 +199,12 @@ class Tester(object):
         # print help and exit
         if args.help:
             return config.hook.pytest_cmdline_main(config=config)
+
+        # verify bench was provided if a benchmarks dir was provided
+        benchdir = config.getoption('bench_dir')
+        if benchdir is not None and not config.getoption('bench'):
+            raise ValueError("please specify '--bench' on the command-line to run benchmarks")
+
 
         # make the test directory exists
         self._initialize_dirs(args)
