@@ -82,6 +82,7 @@ class BenchmarkFixture(object):
         elapsed = end-start
         name = os.path.join(self.qualname, self.testname)
         self.benchmarks[name][tag] = elapsed
+        self.benchmarks[name]['filename'] = self.filename
 
     def report(self):
         """
@@ -100,7 +101,7 @@ class BenchmarkFixture(object):
         """
         # group results by original test function name
         # NOTE: this name ignores the parametrization
-        keyfunc = lambda x: x.split('/')[0].split('.')[-1]
+        keyfunc = lambda x: self.benchmarks[x]['filename']
         groups = itertools.groupby(self.benchmarks.keys(), key=keyfunc)
 
         # sort groups so we avoid MPI issues
@@ -108,7 +109,7 @@ class BenchmarkFixture(object):
         groups = sorted(groups, key=lambda x: x[0])
 
         # loop and gather each parametrized test function
-        for testname, subgroup in groups:
+        for filename, subgroup in groups:
 
             # start with the info for this test
             result = self.header.copy()
@@ -139,5 +140,5 @@ class BenchmarkFixture(object):
 
             # write out
             if self.comm is None or self.comm.rank == 0:
-                filename = os.path.join(self.output_dir, testname) + '.json'
+                filename = os.path.join(self.output_dir, filename) + '.json'
                 json.dump(result, open(filename, 'w'))
