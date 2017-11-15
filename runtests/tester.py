@@ -83,7 +83,7 @@ class Tester(object):
         original_name = request.node.originalname
         if original_name is None:
             original_name = request.node.name
-        session_benchmark.filename = session_benchmark.qualname + '.' + original_name
+        session_benchmark.filename = mod + '.' + original_name
 
         # return the session-wide benchmark
         yield session_benchmark
