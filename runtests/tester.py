@@ -221,7 +221,13 @@ class Tester(object):
         args.pyargs = True
 
         # build the project, returning the site directory
-        site_dir = self._do_build(args)
+        if not args.no_build:
+            site_dir = self._do_build(args)
+
+        if not args.bench:
+            # tests are part of package, thus installed; we use those
+            # but benchs are not part of package, thus not installed.
+            config.args = self._fix_test_paths(site_dir, config.args)
 
         if args.shell:
             self._do_shell(args, config)
@@ -229,9 +235,6 @@ class Tester(object):
         if args.build_only:
             sys.exit(0)
 
-        # fix the path of the modules we are testing
-        # so they point to site_dir
-        config.args = self._fix_test_paths(site_dir, config.args)
 
         # extract the coverage-related options
         covargs = {}
@@ -274,8 +277,7 @@ class Tester(object):
         Build the project and return the site directory in the
         build/ directory
         """
-        if not args.no_build:
-            self._build_project(args)
+        self._build_project(args)
 
         for site_dir in self.SITE_DIRS:
             if os.path.exists(os.path.join(site_dir, self.PROJECT_MODULE)):

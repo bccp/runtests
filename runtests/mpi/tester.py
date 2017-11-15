@@ -223,7 +223,16 @@ class Tester(BaseTester):
         if not args.mpisub:
             self._initialize_dirs(args)
 
-            site_dir = self._do_build(args)
+            if not args.no_build:
+                site_dir = self._do_build(args)
+
+                if not args.bench:
+                    # if we are here, we will run the tests, either as sub or single
+                    # fix the path of the modules we are testing
+                    config.args = self._fix_test_paths(site_dir, config.args)
+
+            else:
+                site_dir = None
 
             if args.build_only:
                 sys.exit(0)
@@ -239,15 +248,18 @@ class Tester(BaseTester):
             capman = config.pluginmanager.getplugin('capturemanager')
             if capman:
                 capman.suspendcapture()
+
             # test on mpisub.
             if args.mpisub_site_dir:
                 site_dir = args.mpisub_site_dir
                 sys.path.insert(0, site_dir)
                 os.environ['PYTHONPATH'] = site_dir
 
-        # if we are here, we will run the tests, either as sub or single
-        # fix the path of the modules we are testing
-        config.args = self._fix_test_paths(site_dir, config.args)
+                if not args.bench:
+                    # if we are here, we will run the tests, either as sub or single
+                    # fix the path of the modules we are testing
+                    config.args = self._fix_test_paths(site_dir, config.args)
+
 
         # extract the coverage-related options
         covargs = {}
@@ -281,6 +293,7 @@ class Tester(BaseTester):
             sys.exit(code)
 
     def _launch_mpisub(self, args, site_dir):
+
         # extract the mpirun run argument
         parser = ArgumentParser(add_help=False)
         # these values are ignored. This is a hack to filter out unused argv.
@@ -290,7 +303,11 @@ class Tester(BaseTester):
 
         # now call with mpirun
         mpirun = args.mpirun.split()
-        cmdargs = [sys.executable, sys.argv[0], '--mpisub', '--mpisub-site-dir=' + site_dir]
+        cmdargs = [sys.executable, sys.argv[0], '--mpisub']
+
+        if site_dir is not None:
+            # mpi subs will use system version of package
+            cmdargs.extend(['--mpisub-site-dir=' + site_dir])
 
         os.execvp(mpirun[0], mpirun + cmdargs + additional)
 
