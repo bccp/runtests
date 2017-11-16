@@ -1,5 +1,5 @@
 from .coverage import Coverage
-from .benchmark import BenchmarkFixture
+from .benchmark import BenchmarkLogger, BenchmarkTimer
 import pytest
 import traceback
 import sys
@@ -43,9 +43,11 @@ class Tester(object):
     @pytest.fixture(scope="session")
     def session_benchmark(self, request):
         """
-        A session-wide benchmark to time and record benchmarks.
+        A session-wide benchmark to time and record benchmarks,
+        corresponding to :class:`BenchmarkLogger`
 
-        When called, the benchmark fixture acts as a context manager.
+        This class acts as a logger to store and save all benchmark
+        results from the testing session.
         """
         comm = self.comm if hasattr(self, 'comm') else None
 
@@ -56,7 +58,7 @@ class Tester(object):
 
         # initialize
         kws = {'version':self.source_version, 'git_hash':self.source_git_hash}
-        benchmark = BenchmarkFixture(output_dir, comm=comm, **kws)
+        benchmark = BenchmarkLogger(output_dir, comm=comm, **kws)
 
         # yield to user
         yield benchmark
@@ -68,25 +70,25 @@ class Tester(object):
     @pytest.fixture(scope="function")
     def benchmark(session_benchmark, request):
         """
-        A testing function benchmark.
+        An object to benchmark an individual test function. When called,
+        this object acts a context manager that does the timing.
+
+        This object has a ``attrs`` dict that the user can add meta-data to,
+        and it reports its results to the ``session_benchmark`` object. 
         """
-        # attach the name of the requesting function
+        # the qualified name of the function being run
         func = request.node.function
         mod, name = func.__module__, func.__name__
-        session_benchmark.qualname = mod + '.' + name
+        qualname = mod + '.' + name
 
-        # add the testname
-        session_benchmark.testname = request.node.name
-
-        # add the qualified test path for output file
-        # (removes any parametrizations)
-        original_name = request.node.originalname
-        if original_name is None:
-            original_name = request.node.name
-        session_benchmark.filename = mod + '.' + original_name
+        # initialize the timer
+        timer = BenchmarkTimer(qualname, request.node, comm=session_benchmark.comm)
 
         # return the session-wide benchmark
-        yield session_benchmark
+        yield timer
+
+        # add result to total
+        session_benchmark.add_benchmark(timer)
 
     @staticmethod
     def pytest_addoption(parser):

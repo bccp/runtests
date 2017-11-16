@@ -16,7 +16,8 @@ def get_machine_info():
             'system': platform.system(),
             'python_version': ".".join(platform.python_version_tuple())}
 
-class BenchmarkFixture(object):
+
+class BenchmarkLogger(object):
     """
     A class to serve as a session-wide benchmarking fixture, tracking
     the benchmark results for individual tests.
@@ -48,6 +49,7 @@ class BenchmarkFixture(object):
 
         self.comm = comm
         self.benchmarks = defaultdict(dict)
+        self.tests_counter = defaultdict(int)
 
         # handle output dir
         self.output_dir = output_dir
@@ -55,10 +57,137 @@ class BenchmarkFixture(object):
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
 
-        # initialize empty function names
-        # these will be updated when each benchmarked function is executed
-        self.testname = None
-        self.qualname = None
+    def add_benchmark(self, result):
+        """
+        Add a benchmark result to the total set of benchmarks.
+
+        Parameters
+        ----------
+        result : BenchmarkTimer
+            an individual benchmark result
+        """
+        key = os.path.join(result.qualname, result.original_testname)
+        name = key + '_%d' % self.tests_counter[key]
+
+        # copy over the result
+        r = result.benchmark.copy()
+        r['attrs'] = result.attrs.copy()
+
+        # add to total benchmarks
+        self.benchmarks[name].update(r)
+
+        # increment test counter
+        self.tests_counter[key] += 1
+
+    def report(self):
+        """
+        Report the benchmark results for all tests run.
+
+        Benchmark results for individual files are stored in different
+        files in :attr:`output_dir`. Results for variants of the same test
+        function (via parametrization) are stored in the same file.
+
+        Benchmark results for a single test variant are stored as a list,
+        equal to the length of the comm size.
+
+        .. note::
+            When using MPI, this should be collectively, as benchmark
+            results are gathered from all ranks. Only the
+        """
+        # group results by the file they will be written to
+        # NOTE: this name ignores the parametrization (parametrized results
+        # get written to same file)
+        keyfunc = lambda x: self.benchmarks[x]['filename']
+        groups = itertools.groupby(self.benchmarks.keys(), key=keyfunc)
+
+        # sort groups so we avoid MPI issues
+        groups = [(key, list(subgroup)) for key, subgroup in groups]
+        groups = sorted(groups, key=lambda x: x[0])
+
+        # loop over each parametrized test function
+        for filename, subgroup in groups:
+
+            # start with the info for this test
+            result = {}
+            result['config'] = self.header.copy()
+            result['tests'] = []
+
+            # loop over subgroups
+            # NOTE: these are the parametrized test variants
+            for i, key in enumerate(sorted(subgroup)):
+
+                # extract the name of this test
+                name = key.split('/')[-1]
+                result['tests'].append(name)
+
+                # initialize dict holding the individual results
+                result[name] = {}
+
+                # a group of benchmarks
+                # NOTE: contains results for all tags within a single function run
+                # for a parametrized variant
+                benchmark_group = self.benchmarks[key]
+                tags = sorted(benchmark_group['tags'])
+
+                # for each tag, gather the benchmark results from each rank
+                for tag in tags:
+                    if self.comm is None:
+                        benchmarks = [benchmark_group[tag]]
+                    else:
+                        benchmarks = self.comm.allgather(benchmark_group[tag])
+                    result[name][tag] = benchmarks
+
+                # store meta data
+                result[name]['testname'] = benchmark_group['testname']
+                result[name]['attrs'] = benchmark_group['attrs']
+
+                # track section names for each test
+                if i == 0:
+                    result['tags'] = tags
+
+            # write out
+            if self.comm is None or self.comm.rank == 0:
+                filename = os.path.join(self.output_dir, filename) + '.json'
+                json.dump(result, open(filename, 'w'))
+
+class BenchmarkTimer(object):
+    """
+    A class to serve as a function-scoped benchmarking fixture that is
+    reponsible for timing each function.
+
+    This will log its results with :class:`BenchmarkLogger`.
+
+    Parameters
+    ----------
+    qualname : str
+        the qualified name of the function being run; this is
+        ``module_name . func_name``
+    node :
+        the request node corresponding to to this test function.
+    """
+    def __init__(self, qualname, node, comm=None):
+
+        # add the testname
+        self.qualname = qualname
+        self.testname = node.name # NOTE: this will include parametrized ID
+
+        # add the qualified test path for output file
+        # (removes any parametrization IDs)
+        self.original_testname = node.originalname
+        if self.original_testname is None:
+            self.original_testname = self.testname
+
+        # the name of the file this function should be written too
+        self.filename = '.'.join(self.qualname.split('.')[:-1] + [self.original_testname])
+
+        self.comm = comm
+
+        # store benchmarks here
+        self.benchmark = {'filename':self.filename, 'testname':self.testname}
+        self.benchmark['tags'] = []
+
+        # store meta-data here
+        self.attrs = {}
 
     @contextmanager
     def __call__(self, tag):
@@ -80,65 +209,5 @@ class BenchmarkFixture(object):
 
         # record the results in benchmarks attribute
         elapsed = end-start
-        name = os.path.join(self.qualname, self.testname)
-        self.benchmarks[name][tag] = elapsed
-        self.benchmarks[name]['filename'] = self.filename
-
-    def report(self):
-        """
-        Report the benchmark results for all tests run.
-
-        Benchmark results for individual files are stored in different
-        files in :attr:`output_dir`. Results for variants of the same test
-        function (via parametrization) are stored in the same file.
-
-        Benchmark results for a single test variant are stored as a list,
-        equal to the length of the comm size.
-
-        .. note::
-            When using MPI, this should be collectively, as benchmark
-            results are gathered from all ranks. Only the
-        """
-        # group results by original test function name
-        # NOTE: this name ignores the parametrization
-        keyfunc = lambda x: self.benchmarks[x]['filename']
-        groups = itertools.groupby(self.benchmarks.keys(), key=keyfunc)
-
-        # sort groups so we avoid MPI issues
-        groups = [(key, list(subgroup)) for key, subgroup in groups]
-        groups = sorted(groups, key=lambda x: x[0])
-
-        # loop and gather each parametrized test function
-        for filename, subgroup in groups:
-
-            # start with the info for this test
-            result = self.header.copy()
-            result['tests'] = []
-            result['sections'] = []
-
-            # loop over subgroups
-            # NOTE: these are the parametrized test variants
-            for i, key in enumerate(sorted(subgroup)):
-                name = key.split('/')[-1]
-                result['tests'].append(name)
-
-                # gather the benchmark results from each rank
-                if self.comm is None:
-                    benchmarks = [self.benchmarks[key]]
-                else:
-                    benchmarks = self.comm.allgather(self.benchmarks[key])
-
-                # gather time results into list of length commsize
-                result[name] = defaultdict(list)
-                for bmark in benchmarks:
-                    for section in bmark.keys():
-                        result[name][section].append(bmark[section])
-
-                # track section names for each test
-                if i == 0:
-                    result['sections'] = sorted(result[name])
-
-            # write out
-            if self.comm is None or self.comm.rank == 0:
-                filename = os.path.join(self.output_dir, filename) + '.json'
-                json.dump(result, open(filename, 'w'))
+        self.benchmark[tag] = elapsed
+        self.benchmark['tags'].append(tag)
