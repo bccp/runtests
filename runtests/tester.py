@@ -52,13 +52,16 @@ class Tester(object):
         comm = self.comm if hasattr(self, 'comm') else None
 
         # determine the output dir
-        output_dir = request.config.getoption('bench_dir')
-        if output_dir is None:
-            output_dir = self.BENCHMARK_DIR
+        benchdir = request.config.getoption('bench_dir')
+        if benchdir is not None:
+            benchdir = os.path.join(self.ROOT_DIR, benchdir)
+            benchdir = os.path.relpath(benchdir, self.TEST_DIR)
+        else:
+            benchdir = self.BENCHMARK_DIR
 
         # initialize
         kws = {'version':self.source_version, 'git_hash':self.source_git_hash}
-        benchmark = BenchmarkLogger(output_dir, comm=comm, **kws)
+        benchmark = BenchmarkLogger(benchdir, comm=comm, **kws)
 
         # yield to user
         yield benchmark
@@ -74,7 +77,7 @@ class Tester(object):
         this object acts a context manager that does the timing.
 
         This object has a ``attrs`` dict that the user can add meta-data to,
-        and it reports its results to the ``session_benchmark`` object. 
+        and it reports its results to the ``session_benchmark`` object.
         """
         # the qualified name of the function being run
         func = request.node.function
@@ -213,7 +216,6 @@ class Tester(object):
         benchdir = config.getoption('bench_dir')
         if benchdir is not None and not config.getoption('bench'):
             raise ValueError("please specify '--bench' on the command-line to run benchmarks")
-
 
         # make the test directory exists
         self._initialize_dirs(args)
