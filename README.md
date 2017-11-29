@@ -1,6 +1,6 @@
 # runtests
 
-[![Build Status](https://travis-ci.org/rainwoodman/runtests.svg?branch=master)](https://travis-ci.org/rainwoodman/runtests)
+[![Build Status](https://travis-ci.org/bccp/runtests.svg?branch=master)](https://travis-ci.org/bccp/runtests)
 
 A simple tools for incrementally building packages, then testing against installed version.
 
