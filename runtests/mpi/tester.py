@@ -247,7 +247,10 @@ class Tester(BaseTester):
 
             capman = config.pluginmanager.getplugin('capturemanager')
             if capman:
-                capman.suspendcapture()
+                if hasattr(capman, 'suspend_global_capture'):
+                    capman.suspend_global_capture()
+                else:
+                    capman.suspendcapture()
 
             # test on mpisub.
             if args.mpisub_site_dir:

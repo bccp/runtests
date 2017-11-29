@@ -298,7 +298,11 @@ class Tester(object):
     def _do_shell(self, args, config):
         capman = config.pluginmanager.getplugin('capturemanager')
         if capman:
-            out, err = capman.suspendcapture(in_=True)
+            if hasattr(capman, 'suspend_global_capture'):
+                capman.suspend_global_capture(in_=True)
+            else:
+                capman.suspendcapture(in_=True)
+
         shell = os.environ.get('SHELL', 'sh')
         print("Spawning a Unix shell...")
         with self._run_from_testdir(args):
