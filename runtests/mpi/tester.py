@@ -312,6 +312,13 @@ class Tester(BaseTester):
             # mpi subs will use system version of package
             cmdargs.extend(['--mpisub-site-dir=' + site_dir])
 
+        # workaround the strict openmpi oversubscribe policy
+        # the parameter is found from
+        # https://github.com/open-mpi/ompi/blob/ba47f738871ff06b8e8f34b8e18282b9fe479586/orte/mca/rmaps/base/rmaps_base_frame.c#L169
+        # see the faq:
+        #   https://www.open-mpi.org/faq/?category=running#oversubscribing
+        os.environ['OMPI_MCA_rmaps_base_oversubscribe'] = '1'
+
         os.execvp(mpirun[0], mpirun + cmdargs + additional)
 
         # if we are here os.execvp has failed; bail
