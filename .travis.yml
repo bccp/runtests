@@ -1,5 +1,9 @@
 language: python
 
+os:
+    - linux
+    - osx
+
 python:
     - 2.7
     - 3.5
@@ -8,7 +12,8 @@ env:
     - NUMPY_VERSION=1.11.1
 
 before_install:
-    - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+    - if [ $TRAVIS_OS_NAME == "linux" ]; then wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh; fi
+    - if [ $TRAVIS_OS_NAME == "osx" ]; then wget http://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh; fi
     - chmod +x miniconda.sh
     - ./miniconda.sh -b -p $HOME/miniconda
     - export PATH=$HOME/miniconda/bin:$PATH
@@ -17,7 +22,8 @@ before_install:
 install:
     - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION
     - source activate test
-    - conda install --yes numpy=$NUMPY_VERSION mpi4py pytest coverage
+    - conda install --yes numpy=$NUMPY_VERSION pytest coverage
+    - conda install -c bccp mpi4py
     - python setup.py install
 
 script:
