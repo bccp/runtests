@@ -271,7 +271,7 @@ class Tester(BaseTester):
         covargs['html_cov'] = args.html_cov
 
         if args.mpisub:
-            self._begin_capture()
+            self._begin_capture(args)
 
         # run the tests
         try:
@@ -327,15 +327,16 @@ class Tester(BaseTester):
     def _sleep(self):
         time.sleep(0.04 * self.comm.rank)
 
-    def _begin_capture(self):
+    def _begin_capture(self, args):
         self.oldstdout = sys.stdout
         self.oldstderr = sys.stderr
         self.newstdout = StringIO()
         self.newstderr = StringIO()
 
-        if self.comm.rank != 0:
-            sys.stdout = self.newstdout
-            sys.stderr = self.newstderr
+        if args.capture != 'no':
+            if self.comm.rank != 0:
+                sys.stdout = self.newstdout
+                sys.stderr = self.newstderr
 
     def _end_capture_and_exit(self, code):
         if code != 0:
