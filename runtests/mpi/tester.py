@@ -306,7 +306,7 @@ class Tester(BaseTester):
 
         # now call with mpirun
         mpirun = args.mpirun.split()
-        cmdargs = [sys.executable, sys.argv[0], '--mpisub']
+        cmdargs = [sys.executable, '-u', sys.argv[0], '--mpisub']
 
         if site_dir is not None:
             # mpi subs will use system version of package
