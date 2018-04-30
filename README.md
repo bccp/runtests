@@ -89,8 +89,11 @@ Example:
         python run-tests.py --pdb
 
 
-        # MPI
+        # MPI on a single rank
         python run-mpitests.py --single --pdb
+
+        # MPI but one debugger per rank.
+        python run-mpitests.py --mpirun='mpirun -n 4 xterm -e' --pdb
     ```
 
 2. Launchging a shell with the module ready to be imported. The shell will start in
