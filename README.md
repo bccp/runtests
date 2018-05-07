@@ -94,6 +94,9 @@ Example:
 
         # MPI but one debugger per rank.
         python run-mpitests.py --mpirun='mpirun -n 4 xterm -e' --pdb
+
+        # shortcut for MPI but one debugger per rank
+        python run-mpitests.py --xterm --pdb
     ```
 
 2. Launchging a shell with the module ready to be imported. The shell will start in
