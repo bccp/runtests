@@ -165,7 +165,8 @@ class Tester(BaseTester):
         $ python runtests.py --single my/module
         $ python runtests.py my/module/tests/test_abc.py
         $ python runtests.py --mpirun="mpirun -np 4" my/module
-        $ python runtests.py --mpirun="mpirun -np 4"
+        $ python runtests.py --mpirun="mpirun -np 4 xterm -hold -e"
+        $ python runtests.py --mpirun="mpirun -np 4" --xterm my/module
     """
 
     @staticmethod
@@ -177,6 +178,9 @@ class Tester(BaseTester):
 
         parser.addoption("--mpirun", default="mpirun -n 4",
                 help="Select MPI launcher, e.g. mpirun -n 4")
+
+        parser.addoption("--xterm", default=False, action='store_true',
+                help="If true, postfix 'xterm -hold -e' to mpirun.")
 
         parser.addoption("--single", default=False, action='store_true',
                 help="Do not run via MPI launcher. ")
@@ -302,10 +306,14 @@ class Tester(BaseTester):
         # these values are ignored. This is a hack to filter out unused argv.
         parser.add_argument("--single", default=False, action='store_true')
         parser.add_argument("--mpirun", default=None)
+        parser.add_argument("--xterm", default=False, action='store_true')
         _args, additional = parser.parse_known_args()
 
         # now call with mpirun
         mpirun = args.mpirun.split()
+        if args.xterm:
+            mpirun.extend(['xterm', '-hold', '-e'])
+
         cmdargs = [sys.executable, '-u', sys.argv[0], '--mpisub']
 
         if site_dir is not None:
