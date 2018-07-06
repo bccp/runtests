@@ -9,7 +9,7 @@
 
     .. code::
 
-        assert_no_cycles(*objs)
+        assert_no_backcycles(*objs)
 
 
 """
@@ -17,6 +17,17 @@
 import gc
 
 def assert_no_cycles(*objs):
+    # FIXME: this needs culling -- but how?
+
+    gc.collect()
+    sccs = tarjan(objs, get_referrers=gc.get_referents)
+
+    if len(sccs) > 0:
+        show_cycles(sccs)
+
+    assert len(sccs) == 0
+
+def assert_no_backcycles(*objs):
     """ Assert no objects on the list induces any cycles
         in the back reference list.
 
@@ -26,16 +37,16 @@ def assert_no_cycles(*objs):
 
             a = 3O
 
-            assert_no_cycles(a)
+            assert_no_backcycles(a)
 
             a = []
             b = [a]
             a[0] = b
 
-            assert_no_cycles(a)
+            assert_no_backcycles(a)
     """
     gc.collect()
-    sccs = tarjan(objs)
+    sccs = tarjan(objs, get_referrers=gc.get_referrers)
 
     if len(sccs) > 0:
         show_cycles(sccs)
