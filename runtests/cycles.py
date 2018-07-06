@@ -11,6 +11,17 @@
 
         assert_no_backcycles(*objs)
 
+    This is not very powerful, as it works against the
+    intuition: if objs references a cycle it won't find it.
+    if only finds cycles that include objs.
+
+    .. code::
+
+        assert_no_cycles(*objs)
+
+    will find cycles that started from objs, but there are
+    in general too many false positives to make this of any
+    practical usefulness.
 
 """
 
