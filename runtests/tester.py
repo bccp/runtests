@@ -419,15 +419,13 @@ class Tester(object):
 
         env['PYTHONPATH'] = ':'.join(self.SITE_DIRS)
 
-        if args.enable_debug:
-            # assume everyone who debugs uses gcc/gfortran
-            env['OPT'] = '-O0 -ggdb'
-            env['FOPT'] = '-O0 -ggdb'
-
         cmd += ['build']
 
         if args.parallel > 1:
             cmd += ["-j", str(args.parallel)]
+
+        if args.enable_debug:
+            cmd += ['--debug']
 
         with open('setup.py', 'rt') as ff:
             text = ff.read()
