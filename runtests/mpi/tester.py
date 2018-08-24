@@ -84,7 +84,12 @@ def MPITest(commsize):
                 pytest.skip("Test skipped because world is too small. Include the test with mpirun -n %d" % (size))
 
             color = 0 if MPI.COMM_WORLD.rank < size else 1
-            comm = MPI.COMM_WORLD.Split(color)
+            if MPI.COMM_WORLD.size == size:
+                comm = MPI.COMM_WORLD
+            elif size == 1:
+                comm = MPI.COMM_SELF
+            else:
+                comm = MPI.COMM_WORLD.Split(color)
             try:
                 if color == 0:
                     rt = func(*args, comm=comm)
@@ -92,7 +97,8 @@ def MPITest(commsize):
                     rt = None
                     #pytest.skip("rank %d not needed for comm of size %d" %(MPI.COMM_WORLD.rank, size))
             finally:
-                comm.Free()
+                if comm is not MPI.COMM_WORLD and comm is not MPI.COMM_SELF:
+                    comm.Free()
                 MPI.COMM_WORLD.barrier()
 
             return rt
