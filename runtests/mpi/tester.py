@@ -51,8 +51,53 @@ def nompi(comm):
         else:
             raise error
 
+
 communicators = {
 }
+
+class WorldTooSmall(Exception): pass
+
+def create_comm(size):
+    from mpi4py import MPI
+    if MPI.COMM_WORLD.size < size:
+        raise WorldTooSmall
+
+    color = 0 if MPI.COMM_WORLD.rank < size else 1
+    if size not in communicators:
+        if MPI.COMM_WORLD.size == size:
+            comm = MPI.COMM_WORLD
+        elif size == 1:
+            comm = MPI.COMM_SELF
+        else:
+            comm = MPI.COMM_WORLD.Split(color)
+        communicators[size] = comm
+
+    return communicators[size], color
+
+def MPITestFixture(commsize, scope='function'):
+    """ Create a test fixture for MPI Communicators of various commsizes """
+
+    @pytest.fixture(params=commsize, scope=scope)
+    def fixture(request):
+        from mpi4py import MPI
+        MPI.COMM_WORLD.barrier()
+        try:
+            comm, color = create_comm(request.param)
+
+            # FIXME: use skip after https://github.com/pytest-dev/pytest/issues/3969 is figured out.
+            if color != 0:
+                request.applymarker(pytest.mark.xfail(reason="Not using communicator %d" % request.param, run=False))
+                return None
+            else:
+                return comm
+
+        except WorldTooSmall:
+            # FIXME: use skip after https://github.com/pytest-dev/pytest/issues/3969 is figured out.
+            request.applymarker(pytest.mark.xfail(reason="World is too small", run=False))
+            return None
+
+    return fixture
+
 def MPITest(commsize):
     """
     A decorator that repeatedly calls the wrapped function,
@@ -82,20 +127,14 @@ def MPITest(commsize):
 
         @pytest.mark.parametrize("size", sizes)
         def wrapped(size, *args):
-            if MPI.COMM_WORLD.size < size:
-                pytest.skip("Test skipped because world is too small. Include the test with mpirun -n %d" % (size))
+            func_names = MPI.COMM_WORLD.allgather(func.__name__)
+            if not all(func_names[0] == i for i in func_names):
+                raise RuntimeError("function calls mismatched", func_names)
 
-            color = 0 if MPI.COMM_WORLD.rank < size else 1
-            if size not in communicators:
-                if MPI.COMM_WORLD.size == size:
-                    comm = MPI.COMM_WORLD
-                elif size == 1:
-                    comm = MPI.COMM_SELF
-                else:
-                    comm = MPI.COMM_WORLD.Split(color)
-                communicators[size] = comm
-
-            comm = communicators[size]
+            try:
+                comm, color = create_comm(size)
+            except WorldTooSmall:
+                return pytest.skip("Test skipped because world is too small. Include the test with mpirun -n %d" % (size))
 
             try:
                 if color == 0:
@@ -110,7 +149,6 @@ def MPITest(commsize):
         wrapped.__name__ = func.__name__
         return wrapped
     return dec
-
 
 def MPIWorld(NTask, required=1, optional=False):
     """
