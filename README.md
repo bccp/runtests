@@ -74,7 +74,7 @@ Example:
 ```
     from runtests.mpi import MPITest
 
-    @MPIWorld(size=[1, 2, 3, 4])
+    @MPITest(size=[1, 2, 3, 4])
     def test_myfunction(comm):
         result = myfunction(comm)
         assert result # or ....
