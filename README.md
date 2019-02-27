@@ -84,7 +84,7 @@ Example:
 
 ### MPITestFixture
 
-You cannot combine `MPITestFixture` with other pytest fixtures or decorators, what you can't with the `MPITest` decorator.
+You can combine `MPITestFixture` with other pytest fixtures or decorators, what you can't with the `MPITest` decorator.
 
 Example: Parameter variation with `pytest.mark.parametrize`
 
@@ -100,7 +100,7 @@ def test_y(msg, comm):
 ```
 
 Example: Parameter variation with `pytest.fixture`
-```bash
+```python
 from runtests.mpi import MPITestFixture
 import pytest
 
