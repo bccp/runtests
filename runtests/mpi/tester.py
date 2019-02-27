@@ -84,16 +84,14 @@ def MPITestFixture(commsize, scope='function'):
         try:
             comm, color = create_comm(request.param)
 
-            # FIXME: use skip after https://github.com/pytest-dev/pytest/issues/3969 is figured out.
             if color != 0:
-                request.applymarker(pytest.mark.xfail(reason="Not using communicator %d" % request.param, run=False))
+                pytest.skip("Not using communicator %d" %(request.param))
                 return None
             else:
                 return comm
 
         except WorldTooSmall:
-            # FIXME: use skip after https://github.com/pytest-dev/pytest/issues/3969 is figured out.
-            request.applymarker(pytest.mark.xfail(reason="World is too small", run=False))
+            pytest.skip("Not using communicator %d" % request.param)
             return None
 
     return fixture

@@ -63,10 +63,12 @@ MPI Tests always stop at the first error; because MPI is not fault tolerant [1].
         python run-tests.py --mpirun="mpirun -np 4"
     ```
 
-## Defining MPI UnitTests: MPITest decorator
+## Defining MPI UnitTests: 
 
 This feature may belong to a different package; it resides here for now before we can
 find a reasonable refactoring of the package.
+
+### MPITest decorator
 
 `MPITest` decorator allows testing with different MPI communicator sizes.
 
@@ -79,6 +81,40 @@ Example:
         result = myfunction(comm)
         assert result # or ....
 ```
+
+### MPITestFixture
+
+You can combine `MPITestFixture` with other pytest fixtures or decorators, what you can't with the `MPITest` decorator.
+
+Example: Parameter variation with `pytest.mark.parametrize`
+
+```python
+from runtests.mpi import MPITestFixture
+import pytest
+
+comm = MPITestFixture([1,2,3, 4,10], scope='function')
+
+@pytest.mark.parametrize("msg",["hello","world"])
+def test_y(msg, comm):
+    print(msg, comm.Get_rank())
+```
+
+Example: Parameter variation with `pytest.fixture`
+```python
+from runtests.mpi import MPITestFixture
+import pytest
+
+comm = MPITestFixture([1,2,3,4], scope='function')
+
+@pytest.fixture(params=["hello","world"])
+def x(request):
+    return request.param
+
+def test_x(x, comm):
+    print(x, comm.Get_rank())
+```
+
+
 ## Tricks
 
 
