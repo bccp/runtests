@@ -291,7 +291,7 @@ class Tester(object):
             sys.exit(1)
 
         sys.path.insert(0, site_dir)
-        os.environ['PYTHONPATH'] = site_dir
+        os.environ['PYTHONPATH'] = site_dir + ":" + os.environ['PYTHONPATH']
 
         return site_dir
 
@@ -417,7 +417,10 @@ class Tester(object):
             if not os.path.exists(basedir):
                 os.makedirs(basedir)
 
-        env['PYTHONPATH'] = ':'.join(self.SITE_DIRS)
+        if 'PYTHONPATH' in env.keys():
+            env['PYTHONPATH'] = ':'.join(self.SITE_DIRS) + ":" + env['PYTHONPATH']
+        else:
+            env['PYTHONPATH'] = ':'.join(self.SITE_DIRS)
 
         cmd += ['build']
 

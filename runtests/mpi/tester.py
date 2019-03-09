@@ -306,8 +306,12 @@ class Tester(BaseTester):
             # test on mpisub.
             if args.mpisub_site_dir:
                 site_dir = args.mpisub_site_dir
+
+                # replace the project directory (at the top of path) with the test directory
+                sys.path.pop(0)
                 sys.path.insert(0, site_dir)
-                os.environ['PYTHONPATH'] = site_dir
+
+                os.environ['PYTHONPATH'] = site_dir # + ":" + os.environ['PYTHONPATH'] I think here it is useless because there is no subprocess of mpisub
 
                 if not args.bench:
                     # if we are here, we will run the tests, either as sub or single
