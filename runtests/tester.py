@@ -413,7 +413,9 @@ class Tester(object):
                   "git checkout or unpacked source")
             sys.exit(1)
 
-        env = dict(os.environ)
+        env = dict(os.environ) # this contains the environment variables that
+        # will be passed to the build subprocess.
+        # In this function the current environment variables are not changed
         cmd = [sys.executable, 'setup.py']
 
         # Always use ccache, if installed
