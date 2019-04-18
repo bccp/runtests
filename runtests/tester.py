@@ -300,8 +300,10 @@ class Tester(object):
         sys.path.insert(0, site_dir) # affects current process only
         print("sys.path, after replacing")
         print(sys.path)
-        os.environ['PYTHONPATH'] = site_dir + ":" + os.environ['PYTHONPATH'] # will affect the subprocess
-
+        if 'PYTHONPATH' in os.environ.keys():
+            os.environ['PYTHONPATH'] = site_dir + ":" + os.environ['PYTHONPATH'] # will affect the subprocess
+        else:
+            os.environ['PYTHONPATH'] = site_dir
         return site_dir
 
     def _do_shell(self, args, config):
