@@ -60,7 +60,7 @@ class WorldTooSmall(Exception): pass
 def create_comm(size, mpi_missing='fail'):
     try:
         from mpi4py import MPI
-    except ModuleNotFoundError:
+    except ImportError:
         # If there is no mpi4py and mpi_missing == 'ignore', then return
         # None as a communicator. The test is then responsible for handling
         # this.
@@ -91,7 +91,7 @@ def MPITestFixture(commsize, scope='function', mpi_missing='fail'):
         try:
             from mpi4py import MPI
             MPI.COMM_WORLD.barrier()
-        except ModuleNotFoundError:
+        except ImportError:
             if mpi_missing != 'ignore':
                 raise
         try:
@@ -130,7 +130,7 @@ def MPITest(commsize, mpi_missing='fail'):
     """
     try:
         from mpi4py import MPI
-    except ModuleNotFoundError:
+    except ImportError:
         if mpi_missing != 'ignore':
             raise
         MPI = None
@@ -191,7 +191,7 @@ def MPIWorld(NTask, required=1, optional=False):
     warnings.warn("This function is deprecated, use MPITest instead.", DeprecationWarning)
     try:
         from mpi4py import MPI
-    except ModuleNotFoundError:
+    except ImportError:
         if mpi_missing != 'ignore':
             raise
         MPI = None
@@ -311,7 +311,7 @@ class Tester(BaseTester):
         try:
             from mpi4py import MPI
             return MPI.COMM_WORLD
-        except ModuleNotFoundError:
+        except ImportError:
             if self._mpi_missing == 'ignore':
                 return None
             raise
