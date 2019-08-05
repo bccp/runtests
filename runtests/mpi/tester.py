@@ -290,7 +290,7 @@ class Tester(BaseTester):
         parser.addoption("--mpisub-site-dir", default=None, help="site-dir in mpisub")
 
 
-    def __init__(self, *args, mpi_missing='fail', **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Parameters
         ----------
@@ -301,8 +301,10 @@ class Tester(BaseTester):
         extra path : list of str
             extra paths to include on PATH when building
         """
+        if 'mpi_missing' in kwargs:
+            self._mpi_missing = kwargs['mpi_missing']
+            del kwargs['mpi_missing']
         super(Tester, self).__init__(*args, **kwargs)
-        self._mpi_missing = mpi_missing
 
     @property
     def comm(self):
