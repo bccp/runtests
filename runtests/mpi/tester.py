@@ -301,6 +301,7 @@ class Tester(BaseTester):
         extra path : list of str
             extra paths to include on PATH when building
         """
+        self._mpi_missing = 'fail'
         if 'mpi_missing' in kwargs:
             self._mpi_missing = kwargs['mpi_missing']
             del kwargs['mpi_missing']
