@@ -290,16 +290,16 @@ class Tester(object):
             print("Package %s not properly installed" % self.PROJECT_MODULE)
             sys.exit(1)
 
-        print("### _do_build")
-        print("sys.path, before replacing")
-        print(sys.path)
+        #print("### _do_build")
+        #print("sys.path, before replacing")
+        #print(sys.path)
         # python adds automatically the current dir (project dir)
         # at the top of sys.path
         # here we removed it again
         sys.path.pop(0)
         sys.path.insert(0, site_dir) # affects current process only
-        print("sys.path, after replacing")
-        print(sys.path)
+        #print("sys.path, after replacing")
+        #print(sys.path)
         if 'PYTHONPATH' in os.environ.keys():
             os.environ['PYTHONPATH'] = site_dir + ":" + os.environ['PYTHONPATH'] # will affect the subprocess
         else:

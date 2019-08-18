@@ -369,9 +369,9 @@ class Tester(BaseTester):
                 site_dir = args.mpisub_site_dir
 
                 # replace the project directory (at the top of path) with the test directory
-                print("### MPISUB")
-                print("sys.path, before replacing")
-                print(sys.path)
+                #print("### MPISUB")
+                #print("sys.path, before replacing")
+                #print(sys.path)
                 # python adds automatically the current dir (project dir)
                 # at the top of sys.path
                 # here we removed it again
@@ -379,12 +379,12 @@ class Tester(BaseTester):
                 # we don't need to add the site dir because it was already put in
                 # PYTHONPATH by the parent process
                 #sys.path.insert(0, site_dir)
-                print("sys.path, after replacing")
-                print(sys.path)
+                #print("sys.path, after replacing")
+                #print(sys.path)
                 # setting environ['PYTHONPATH'] is useless here because there is no subprocess of mpisub
                 #os.environ['PYTHONPATH'] = site_dir
-                print("PYTHONPATH")
-                print(os.environ['PYTHONPATH'])
+                #print("PYTHONPATH")
+                #print(os.environ['PYTHONPATH'])
 
                 if not args.bench:
                     # if we are here, we will run the tests, either as sub or single
