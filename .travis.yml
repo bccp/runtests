@@ -27,8 +27,10 @@ script:
     # regular unit tests
     #-------------------
     - python ./run-tests.py runtests/tests/test_regular.py
+    - python ./run-tests.py runtests/tests/test_regular.py --with-coverage
     - python ./run-mpitests.py --single runtests/tests/test_regular.py
     - python ./run-mpitests.py runtests/mpi/tests/test_mpiworld.py
+    - python ./run-mpitests.py runtests/tests/test_regular.py --with-coverage
     # expecting a failure for uncollective
     - if python ./run-mpitests.py runtests/mpi/tests/test_uncollective.py; then false; fi;
 
