@@ -3,6 +3,7 @@ import tempfile
 import os
 import coverage
 import shutil
+import glob
 
 class Coverage(object):
     """
@@ -44,13 +45,27 @@ class Coverage(object):
         if not os.path.exists(self.config_file):
             self.config_file = None
 
+        if self.comm:
+            if self.comm.rank == 0:
+                self.tmpdir = tempfile.mkdtemp()
+            else:
+                self.tmpdir = None
+            self.tmpdir = self.comm.bcast(self.tmpdir)
+            self.tmp_datafile = "coverage.%d" % self.comm.rank
+        else:
+            self.tmpdir = tempfile.mkdtemp()
+            self.tmp_datafile = "coverage"
+
     def __enter__(self):
 
         if not self.with_coverage:
             self.cov = None
             return
         else:
-            self.cov = coverage.coverage(source=[self.source], config_file=self.config_file)
+            self.cov = coverage.coverage(source=[self.source],
+                config_file=self.config_file,
+                data_file=os.path.join(self.tmpdir, self.tmp_datafile)
+            )
             self.cov.start()
 
     def __exit__(self, type, value, tb):
@@ -61,7 +76,7 @@ class Coverage(object):
 
         # with only one rank, just write out the coverage
         if self.comm is None or self.comm.size == 1:
-            self.cov.get_data().write_file(os.path.join(self.root, self.cov.config.data_file))
+            self.cov.get_data().write()
             self.report(self.cov)
 
         # parallel -- combine coverage from all ranks
@@ -75,17 +90,17 @@ class Coverage(object):
 
             try:
                 # write coverage data file
-                filename = os.path.join(tmpdir, '.coverage.%d' % os.getpid())
-                self.cov.get_data().write_file(filename)
+                self.cov.get_data().write()
 
                 # now combine from each rank and save
                 self.comm.barrier()
                 if self.comm.rank == 0:
 
                     # write out combined data
-                    combined_cov = coverage.coverage(config_file=self.config_file, data_file='.coverage')
-                    combined_cov.combine(data_paths=[tmpdir])
-                    combined_cov.get_data().write_file(os.path.join(self.root, self.cov.config.data_file))
+                    combined_cov = coverage.coverage(config_file=self.config_file)
+                    combined_cov.combine(data_paths=glob.glob(os.path.join(
+                                            self.tmpdir, '*')))
+                    combined_cov.get_data().write()
 
                     # and report
                     self.report(combined_cov)
