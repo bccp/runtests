@@ -153,3 +153,13 @@ def test_x(x, comm):
 
 6. Adding commandline arguments via conftest.py is not supported. (Issue #14)
    If this is a global behavior of the tester, then consider subclassing `Tester` in run-tests.py instead. 
+
+## Contribute
+
+Testing runtests itself requires an installed version of runtests.
+This is because runtests refuses to import from the source code directory.
+
+Also be aware that some of the tests are supposed to fail.
+
+Follow the example in `travis.yaml` for running the tests locally. In the long
+run we may want to refactor it into a shell script.

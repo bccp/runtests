@@ -450,6 +450,8 @@ class Tester(BaseTester):
         # see the faq:
         #   https://www.open-mpi.org/faq/?category=running#oversubscribing
         os.environ['OMPI_MCA_rmaps_base_oversubscribe'] = '1'
+        os.environ['OMPI_MCA_rmaps_base_no_oversubscribe'] = '0'
+        os.environ['OMPI_MCA_mpi_yield_when_idle'] = '1'
 
         os.execvp(mpirun[0], mpirun + cmdargs + additional)
 
