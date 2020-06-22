@@ -94,6 +94,8 @@ def MPITestFixture(commsize, scope='function', mpi_missing_policy='fail'):
         except ImportError:
             if mpi_missing_policy != 'ignore':
                 raise
+        if MPI is not None:
+            MPI.COMM_WORLD.barrier()
         try:
             comm, color = create_comm(request.param, mpi_missing_policy=mpi_missing_policy)
 
