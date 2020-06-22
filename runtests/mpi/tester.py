@@ -57,14 +57,14 @@ communicators = {
 
 class WorldTooSmall(Exception): pass
 
-def create_comm(size, mpi_missing='fail'):
+def create_comm(size, mpi_missing_policy='fail'):
     try:
         from mpi4py import MPI
     except ImportError:
-        # If there is no mpi4py and mpi_missing == 'ignore', then return
+        # If there is no mpi4py and mpi_missing_policy == 'ignore', then return
         # None as a communicator. The test is then responsible for handling
         # this.
-        if mpi_missing == 'ignore':
+        if mpi_missing_policy == 'ignore':
             return None, 0
         raise
 
@@ -83,7 +83,7 @@ def create_comm(size, mpi_missing='fail'):
 
     return communicators[size], color
 
-def MPITestFixture(commsize, scope='function', mpi_missing='fail'):
+def MPITestFixture(commsize, scope='function', mpi_missing_policy='fail'):
     """ Create a test fixture for MPI Communicators of various commsizes """
 
     @pytest.fixture(params=commsize, scope=scope)
@@ -92,10 +92,10 @@ def MPITestFixture(commsize, scope='function', mpi_missing='fail'):
             from mpi4py import MPI
             MPI.COMM_WORLD.barrier()
         except ImportError:
-            if mpi_missing != 'ignore':
+            if mpi_missing_policy != 'ignore':
                 raise
         try:
-            comm, color = create_comm(request.param, mpi_missing=mpi_missing)
+            comm, color = create_comm(request.param, mpi_missing_policy=mpi_missing_policy)
 
             if color != 0:
                 pytest.skip("Not using communicator %d" %(request.param))
@@ -109,7 +109,7 @@ def MPITestFixture(commsize, scope='function', mpi_missing='fail'):
 
     return fixture
 
-def MPITest(commsize, mpi_missing='fail'):
+def MPITest(commsize, mpi_missing_policy='fail'):
     """
     A decorator that repeatedly calls the wrapped function,
     with communicators of varying sizes.
@@ -131,7 +131,7 @@ def MPITest(commsize, mpi_missing='fail'):
     try:
         from mpi4py import MPI
     except ImportError:
-        if mpi_missing != 'ignore':
+        if mpi_missing_policy != 'ignore':
             raise
         MPI = None
     if not isinstance(commsize, (tuple, list)):
@@ -192,7 +192,7 @@ def MPIWorld(NTask, required=1, optional=False):
     try:
         from mpi4py import MPI
     except ImportError:
-        if mpi_missing != 'ignore':
+        if mpi_missing_policy != 'ignore':
             raise
         MPI = None
 
@@ -301,10 +301,10 @@ class Tester(BaseTester):
         extra path : list of str
             extra paths to include on PATH when building
         """
-        self._mpi_missing = 'fail'
-        if 'mpi_missing' in kwargs:
-            self._mpi_missing = kwargs['mpi_missing']
-            del kwargs['mpi_missing']
+        self._mpi_missing_policy = 'fail'
+        if 'mpi_missing_policy' in kwargs:
+            self._mpi_missing_policy = kwargs['mpi_missing_policy']
+            del kwargs['mpi_missing_policy']
         super(Tester, self).__init__(*args, **kwargs)
 
     @property
@@ -313,7 +313,7 @@ class Tester(BaseTester):
             from mpi4py import MPI
             return MPI.COMM_WORLD
         except ImportError:
-            if self._mpi_missing == 'ignore':
+            if self._mpi_missing_policy == 'ignore':
                 return None
             raise
 
