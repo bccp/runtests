@@ -90,7 +90,6 @@ def MPITestFixture(commsize, scope='function', mpi_missing_policy='fail'):
     def fixture(request):
         try:
             from mpi4py import MPI
-            MPI.COMM_WORLD.barrier()
         except ImportError:
             if mpi_missing_policy != 'ignore':
                 raise
@@ -123,7 +122,8 @@ def MPITest(commsize, mpi_missing_policy='fail'):
     ----------
     commsize: scalar or tuple
         Sizes of communicator to use
-
+    mpi_missing_policy: {"fail", "ignore"}
+        wether to fail or to pass comm=None when mpi4py is not available
     Usage
     -----
     @MPITest(commsize=[1, 2, 3])
@@ -172,7 +172,7 @@ def MPITest(commsize, mpi_missing_policy='fail'):
         return wrapped
     return dec
 
-def MPIWorld(NTask, required=1, optional=False):
+def MPIWorld(NTask, required=1, optional=False, mpi_missing_policy="fail"):
     """
     A decorator that repeatedly calls the wrapped function,
     with communicators of varying sizes.
@@ -189,6 +189,8 @@ def MPIWorld(NTask, required=1, optional=False):
         to abort the tests.
     optional : boolean
         If requirement not satistied, skip the test.
+    mpi_missing_policy: {"fail", "ignore"}
+        wether to fail or to pass comm=None when mpi4py is not available
     """
     warnings.warn("This function is deprecated, use MPITest instead.", DeprecationWarning)
     try:
@@ -302,6 +304,8 @@ class Tester(BaseTester):
             the name of the package to test
         extra path : list of str
             extra paths to include on PATH when building
+        mpi_missing_policy: {"fail", "ignore"}
+            wether to fail or to pass comm=None when mpi4py is not available
         """
         self._mpi_missing_policy = 'fail'
         if 'mpi_missing_policy' in kwargs:
