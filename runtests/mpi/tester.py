@@ -57,8 +57,17 @@ communicators = {
 
 class WorldTooSmall(Exception): pass
 
-def create_comm(size):
-    from mpi4py import MPI
+def create_comm(size, mpi_missing_policy='fail'):
+    try:
+        from mpi4py import MPI
+    except ImportError:
+        # If there is no mpi4py and mpi_missing_policy == 'ignore', then return
+        # None as a communicator. The test is then responsible for handling
+        # this.
+        if mpi_missing_policy == 'ignore':
+            return None, 0
+        raise
+
     if MPI.COMM_WORLD.size < size:
         raise WorldTooSmall
 
@@ -74,15 +83,20 @@ def create_comm(size):
 
     return communicators[size], color
 
-def MPITestFixture(commsize, scope='function'):
+def MPITestFixture(commsize, scope='function', mpi_missing_policy='fail'):
     """ Create a test fixture for MPI Communicators of various commsizes """
 
     @pytest.fixture(params=commsize, scope=scope)
     def fixture(request):
-        from mpi4py import MPI
-        MPI.COMM_WORLD.barrier()
         try:
-            comm, color = create_comm(request.param)
+            from mpi4py import MPI
+        except ImportError:
+            if mpi_missing_policy != 'ignore':
+                raise
+        if MPI is not None:
+            MPI.COMM_WORLD.barrier()
+        try:
+            comm, color = create_comm(request.param, mpi_missing_policy=mpi_missing_policy)
 
             if color != 0:
                 pytest.skip("Not using communicator %d" %(request.param))
@@ -96,7 +110,7 @@ def MPITestFixture(commsize, scope='function'):
 
     return fixture
 
-def MPITest(commsize):
+def MPITest(commsize, mpi_missing_policy='fail'):
     """
     A decorator that repeatedly calls the wrapped function,
     with communicators of varying sizes.
@@ -108,14 +122,20 @@ def MPITest(commsize):
     ----------
     commsize: scalar or tuple
         Sizes of communicator to use
-
+    mpi_missing_policy: {"fail", "ignore"}
+        wether to fail or to pass comm=None when mpi4py is not available
     Usage
     -----
     @MPITest(commsize=[1, 2, 3])
     def test_stuff(comm):
         pass
     """
-    from mpi4py import MPI
+    try:
+        from mpi4py import MPI
+    except ImportError:
+        if mpi_missing_policy != 'ignore':
+            raise
+        MPI = None
     if not isinstance(commsize, (tuple, list)):
         commsize = (commsize,)
 
@@ -125,7 +145,10 @@ def MPITest(commsize):
 
         @pytest.mark.parametrize("size", sizes)
         def wrapped(size, *args):
-            func_names = MPI.COMM_WORLD.allgather(func.__name__)
+            if MPI is None:
+                func_names = [func.__name__]
+            else:
+                func_names = MPI.COMM_WORLD.allgather(func.__name__)
             if not all(func_names[0] == i for i in func_names):
                 raise RuntimeError("function calls mismatched", func_names)
 
@@ -141,14 +164,15 @@ def MPITest(commsize):
                     rt = None
                     #pytest.skip("rank %d not needed for comm of size %d" %(MPI.COMM_WORLD.rank, size))
             finally:
-                MPI.COMM_WORLD.barrier()
+                if MPI is not None:
+                    MPI.COMM_WORLD.barrier()
 
             return rt
         wrapped.__name__ = func.__name__
         return wrapped
     return dec
 
-def MPIWorld(NTask, required=1, optional=False):
+def MPIWorld(NTask, required=1, optional=False, mpi_missing_policy="fail"):
     """
     A decorator that repeatedly calls the wrapped function,
     with communicators of varying sizes.
@@ -165,9 +189,16 @@ def MPIWorld(NTask, required=1, optional=False):
         to abort the tests.
     optional : boolean
         If requirement not satistied, skip the test.
+    mpi_missing_policy: {"fail", "ignore"}
+        wether to fail or to pass comm=None when mpi4py is not available
     """
     warnings.warn("This function is deprecated, use MPITest instead.", DeprecationWarning)
-    from mpi4py import MPI
+    try:
+        from mpi4py import MPI
+    except ImportError:
+        if mpi_missing_policy != 'ignore':
+            raise
+        MPI = None
 
     if not isinstance(NTask, (tuple, list)):
         NTask = (NTask,)
@@ -176,28 +207,53 @@ def MPIWorld(NTask, required=1, optional=False):
         required = (required,)
 
     maxsize = max(required)
-    if MPI.COMM_WORLD.size < maxsize and not optional:
-        raise ValueError("Test Failed because the world is too small. Increase to mpirun -n %d, current size = %d" % (maxsize, MPI.COMM_WORLD.size))
+    if MPI is None:
+        if maxsize > 1 and not optional:
+            raise ValueError("Test Failed because MPI is missing but the test "
+                             "requested a communicator of size {}."
+                             .format(maxsize))
+    else:
+        if MPI.COMM_WORLD.size < maxsize and not optional:
+            raise ValueError("Test Failed because the world is too small. The "
+                             "test request a communicator of size {0}, but "
+                             "the current communicator has size {1}. Increase "
+                             "to mpirun -n {0}."
+                             .format(maxsize, MPI.COMM_WORLD.size))
 
     sizes = sorted(set(list(required) + list(NTask)))
     def dec(func):
 
         @pytest.mark.parametrize("size", sizes)
         def wrapped(size, *args):
-            if MPI.COMM_WORLD.size < size:
-                pytest.skip("Test skipped because world is too small. Include the test with mpirun -n %d" % (size))
+            if MPI is None:
+                if maxsize > 1 and not optional:
+                    raise ValueError("Test Failed because MPI is missing but "
+                                     "the test requested a communicator of "
+                                     "size {}.".format(maxsize))
+                color = 0
+                comm = None
+            else:
+                if MPI.COMM_WORLD.size < maxsize and not optional:
+                    raise ValueError("Test Failed because the world is too "
+                                     "small. The test request a communicator "
+                                     "of size {0}, but the current "
+                                     "communicator has size {1}. Increase to "
+                                     "mpirun -n {0}."
+                                     .format(maxsize, MPI.COMM_WORLD.size))
 
-            color = 0 if MPI.COMM_WORLD.rank < size else 1
-            comm = MPI.COMM_WORLD.Split(color)
+                color = 0 if MPI.COMM_WORLD.rank < size else 1
+                comm = MPI.COMM_WORLD.Split(color)
 
             if color == 0:
                 rt = func(*args, comm=comm)
 
-            MPI.COMM_WORLD.barrier()
+            if MPI is not None:
+                MPI.COMM_WORLD.barrier()
             if color == 1:
                 #pytest.skip("rank %d not needed for comm of size %d" %(MPI.COMM_WORLD.rank, size))
                 rt = None
-            comm.Free()
+            if comm is not None:
+                comm.Free()
             return rt
         wrapped.__name__ = func.__name__
         return wrapped
@@ -248,13 +304,24 @@ class Tester(BaseTester):
             the name of the package to test
         extra path : list of str
             extra paths to include on PATH when building
+        mpi_missing_policy: {"fail", "ignore"}
+            wether to fail or to pass comm=None when mpi4py is not available
         """
+        self._mpi_missing_policy = 'fail'
+        if 'mpi_missing_policy' in kwargs:
+            self._mpi_missing_policy = kwargs['mpi_missing_policy']
+            del kwargs['mpi_missing_policy']
         super(Tester, self).__init__(*args, **kwargs)
 
     @property
     def comm(self):
-        from mpi4py import MPI
-        return MPI.COMM_WORLD
+        try:
+            from mpi4py import MPI
+            return MPI.COMM_WORLD
+        except ImportError:
+            if self._mpi_missing_policy == 'ignore':
+                return None
+            raise
 
     def main(self, argv):
         # must bail after first dead test; avoiding a fault MPI collective state.
@@ -306,8 +373,24 @@ class Tester(BaseTester):
             # test on mpisub.
             if args.mpisub_site_dir:
                 site_dir = args.mpisub_site_dir
-                sys.path.insert(0, site_dir)
-                os.environ['PYTHONPATH'] = site_dir
+
+                # replace the project directory (at the top of path) with the test directory
+                #print("### MPISUB")
+                #print("sys.path, before replacing")
+                #print(sys.path)
+                # python adds automatically the current dir (project dir)
+                # at the top of sys.path
+                # here we removed it again
+                sys.path.pop(0)
+                # we don't need to add the site dir because it was already put in
+                # PYTHONPATH by the parent process
+                #sys.path.insert(0, site_dir)
+                #print("sys.path, after replacing")
+                #print(sys.path)
+                # setting environ['PYTHONPATH'] is useless here because there is no subprocess of mpisub
+                #os.environ['PYTHONPATH'] = site_dir
+                #print("PYTHONPATH")
+                #print(os.environ['PYTHONPATH'])
 
                 if not args.bench:
                     # if we are here, we will run the tests, either as sub or single

@@ -290,9 +290,20 @@ class Tester(object):
             print("Package %s not properly installed" % self.PROJECT_MODULE)
             sys.exit(1)
 
-        sys.path.insert(0, site_dir)
-        os.environ['PYTHONPATH'] = site_dir
-
+        #print("### _do_build")
+        #print("sys.path, before replacing")
+        #print(sys.path)
+        # python adds automatically the current dir (project dir)
+        # at the top of sys.path
+        # here we removed it again
+        sys.path.pop(0)
+        sys.path.insert(0, site_dir) # affects current process only
+        #print("sys.path, after replacing")
+        #print(sys.path)
+        if 'PYTHONPATH' in os.environ.keys():
+            os.environ['PYTHONPATH'] = site_dir + ":" + os.environ['PYTHONPATH'] # will affect the subprocess
+        else:
+            os.environ['PYTHONPATH'] = site_dir
         return site_dir
 
     def _do_shell(self, args, config):
@@ -404,7 +415,9 @@ class Tester(object):
                   "git checkout or unpacked source")
             sys.exit(1)
 
-        env = dict(os.environ)
+        env = dict(os.environ) # this contains the environment variables that
+        # will be passed to the build subprocess.
+        # In this function the current environment variables are not changed
         cmd = [sys.executable, 'setup.py']
 
         # Always use ccache, if installed
@@ -417,7 +430,12 @@ class Tester(object):
             if not os.path.exists(basedir):
                 os.makedirs(basedir)
 
-        env['PYTHONPATH'] = ':'.join(self.SITE_DIRS)
+        if 'PYTHONPATH' in env.keys():
+            # if the environment variable PYTHONPATH wasn't set,
+            # trying to access the value of env['PYTHONPATH']throws an error
+            env['PYTHONPATH'] = ':'.join(self.SITE_DIRS) + ":" + env['PYTHONPATH']
+        else:
+            env['PYTHONPATH'] = ':'.join(self.SITE_DIRS)
 
         cmd += ['build']
 
